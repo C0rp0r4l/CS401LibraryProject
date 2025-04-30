@@ -128,8 +128,7 @@ public class Server {
 		                        Member member = findMember(text);
 		                        if (member != null) {
 		                            response = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.success, 
-		                                                  "Member account: " + member.getUserID() + " has " + 
-		                                                  member.getStrikes() + " strikes. \n" + member.getAccountHold());
+		                                                  member.getStanding() + "\n" + member.getAccountHold());
 		                        } else {
 		                            response = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.failure, 
 		                                                "Member " + text + " not found");
