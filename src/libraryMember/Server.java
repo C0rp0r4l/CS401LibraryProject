@@ -47,7 +47,7 @@ public class Server {
 		        
 		        //ClientHandler Constructor is fed a socket argument
 		        public ClientHandler(Socket socket) {
-		            //assign the argument socket to the clientSocket inside the CklientHandler
+		            //assign the argument socket to the clientSocket inside the ClientHandler
 		        	this.clientSocket = socket;
 		        }
 
@@ -56,6 +56,7 @@ public class Server {
 		            try (ObjectOutputStream outSocket = new ObjectOutputStream(clientSocket.getOutputStream());
 		                 ObjectInputStream inSocket = new ObjectInputStream(clientSocket.getInputStream())) {
 		                
+		            	//Should we request client login? 
 		                while (true) {
 		                    Message inboundMessage = (Message) inSocket.readObject();
 		                    

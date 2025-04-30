@@ -1,3 +1,4 @@
+package libraryMember;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -5,13 +6,13 @@ import java.util.Random;
 
 public class Member {
 	//variables
+	static private int count = 0;
 	private String userID;
 	//private String userPassword;
 	boolean accountHold;
 	private String name;
 	private int strikes;
-	private List<Item> checkedOutItems;
-	private List<Item> reservedItems;
+
 	
 	//methods
 	//constructor
@@ -21,15 +22,15 @@ public class Member {
 		//now generate 3 random digits
 		Random rand = new Random();
 		//gives a random number between 100 and 999
-		int randomDigits = rand.nextInt(900) + 100;
+		int randomDigits = rand.nextInt(30000) + 10000;
 		//now append the random digits onto the name prefix for our new userID
-		this.userID = namePrefix + randomDigits;
+		this.userID = namePrefix + randomDigits + count;
 		//now construct the rest of the variables
 		this.accountHold = false;
 		this.name = name;
 		this.strikes = 0;
-		this.checkedOutItems = new ArrayList<>();
-		this.reservedItems = new ArrayList<>();
+		
+		count++;
 		//REMEMBER THE MAIN WAY TO FIND A MEMBER IS WITH THE USERID
 	}
 	
@@ -96,21 +97,4 @@ public class Member {
 			this.accountHold = false;
 		}
 	}
-	
-	//add items to accounts Checked out Items
-	public void checkoutItem() {
-		
-	}
-	
-	//add items to accounts reserved Items
-	public void reserveItem() {
-
-	}
-	
-	
-	//get account checked out items
-	public String getCheckedItems() {
-		return "";
-	}
-	
 }

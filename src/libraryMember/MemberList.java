@@ -1,9 +1,10 @@
+package libraryMember;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Scanner;
 
 public class MemberList {
-	private int numMembers;
+	private Integer numMembers;
 	private Member[] mArray;
 	private String sourceName = "memberList";
 	private boolean modified = false;
@@ -22,15 +23,15 @@ public class MemberList {
 		String list = "";
 		
 		for(int i = 0; i < numMembers; i++) {
-			String temp = mArray[i].getName() + " " + mArray[i].getUserID()
-		                  + mArray[i].getStrikes() + " " + mArray[i].getAccountHold() + "\n";
+			String temp = mArray[i].getName() + "," + mArray[i].getUserID()
+					+ "," + mArray[i].getStrikes() + "," + mArray[i].getAccountHold() + "\n";
 			list = list.concat(temp);
 		}
-		
 		return list;
 	}
 	
 	public void removeMember(String id) {
+		
 		for(int i = 0; i < numMembers; i++) {
 			if(mArray[i].getUserID().compareTo(id) == 0) {
 				mArray[i] = mArray[numMembers];
@@ -40,6 +41,7 @@ public class MemberList {
 	}
 	
 	public void addMember(String name) {
+		
 		if(mArray.length == numMembers) {
 			Member[] temp = new Member[numMembers*2];
 			for(int i = 0; i < numMembers; i++) {
@@ -47,10 +49,9 @@ public class MemberList {
 			}
 			mArray = temp;
 		}
-		else {
-			Member temp = new Member(name);
-			mArray[numMembers] = temp;
-		}
+		
+		Member temp = new Member(name);
+		mArray[numMembers] = temp;
 	}
 	
 	// INCOMPLETE ! Not sure how to format our save/load 
