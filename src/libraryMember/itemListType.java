@@ -1,7 +1,8 @@
 package libraryMember;
 
 public enum itemListType {
-	Ownership,
+	Library,
+	Rental,
 	Reservation,
 	Undefined
 }

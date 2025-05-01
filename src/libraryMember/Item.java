@@ -9,7 +9,7 @@ public class Item {
 	private String year;
 	private String author;
 	private String[] memberList;
-	private Integer numOwners;
+	private Integer numMember;
 	private Integer quantity;
 	
 	public Item(String t, String y, String a, Integer q) {
@@ -40,22 +40,31 @@ public class Item {
 	
 	// Check if the number of owners is higher than the available quantity
 	// If it is return false, if not return true (indicating a succesful operation)
-	public Boolean addOwner(String id) {
+	public Boolean addMember(String id) {
 		if(memberList.length >= quantity) {
 			return false;
 		}
 		else {
-			memberList[numOwners] = id;
+			memberList[numMember] = id;
 			return true;
 		}
+	}
+
+	public Boolean removeMember(String id){
+		for(int i = 0; i < numMember; i++) {
+			if(memberList[i].compareTo(id) == 0){
+				memberList[i] = memberList[numMember];
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	// Print out the attributes seperated by comma and the number of owners + list of members
 	// number of owners is important because we need to somehow know the number of strings to parse
 	// while saving or loading.
-	// Alternative methods are definitely possible but I can't think of anything simpler right now
 	public String toString() {
-		String temp = itemID + "," + title + "," + year + "," + author + "," + quantity + "," + numOwners;
+		String temp = itemID + "," + title + "," + year + "," + author + "," + quantity + "," + numMember;
 		for(int i = 0; i < memberList.length; i++) {
 			String list = "," + memberList[i];
 			temp.concat(list);

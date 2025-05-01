@@ -10,15 +10,19 @@ public class ItemList {
 	private boolean modified = false;
 	
 	
+	// Two types of item lists, one will be for keeping track of rentals, the other for reservations
 	public ItemList(itemListType t) {
 		numItems = 0;
 		iArray = new Item[1000];
 		type = t;
-		if(type == itemListType.Ownership) {
-			sourceName = "itemOwnerList";
+		if(type == itemListType.Rental) {
+			sourceName = "itemRentalList";
 		}
 		else if(type == itemListType.Reservation) {
 			sourceName = "itemReservationList";
+		}
+		else if(type == itemListType.Library) {
+			sourceName = "itemsInLibrary";
 		}
 	}
 	
@@ -30,7 +34,48 @@ public class ItemList {
 		}
 		return list;
 	}
+
+	// If list is of type library you can not add owners to it
+	// Get memberID and ItemID, look for the matching itemID
+	// if no matches or item is out of copies return false
+	// otherwise return true
+	public Boolean addMemberToItem(String memberID, String itemID) {
+		if(this.type == itemListType.Library) {
+			return false;
+		}
+		else {
+			for(int i = 0; i < numItems; i++) {
+				if(iArray[i].getID().compareTo(itemID) == 0){
+					Boolean success = iArray[i].addMember(memberID);
+					if(success == false){
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+	}
+
+	// Same thing as add member to Item but remove instead 
+	public Boolean removeMemberFromItem(String memberID, String itemID) {
+		if(this.type == itemListType.Library) {
+			return false;
+		}
+		else {
+			for(int i = 0; i < numItems; i++) {
+				if(iArray[i].getID().compareTo(itemID) == 0){
+					Boolean success = iArray[i].removeMember(memberID);
+					if(success == false) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+	}
+
 	
+	// Add an item with title, year, author, quantity 
 	public void addItem(String t, String y, String a, int q) {
 		Item temp = new Item(t, y, a, q);
 		
@@ -46,6 +91,7 @@ public class ItemList {
 		modified = true;
 	}
 	
+	// Get the type of list this is
 	public itemListType getType() {
 		return type;
 	}
@@ -111,7 +157,7 @@ public class ItemList {
 				// for each item
 				for(int i = 0; i < numOwners; i++) {
 					String scan = scanner.next();
-					temp.addOwner(scan);
+					temp.addMember(scan);
 				}
 				scanner.close();
 				return true;
