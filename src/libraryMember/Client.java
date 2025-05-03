@@ -1,4 +1,4 @@
-package libraryMember;
+package scmot;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -6,126 +6,291 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Scanner;
 
-
 public class Client {
-	private static String serverAddress = "localhost";
-	private static int port = 7777;
-	
-	public static void main(String[] args) {
-		//establish connection with host address and port number
-		try (Socket socket = new Socket(serverAddress, port)) {
-			//create a scanner object
-			Scanner scanner = new Scanner(System.in);
-			//create output stream socket
-			ObjectOutputStream outSocket = new ObjectOutputStream(socket.getOutputStream());
-			//create input stream socket
-			ObjectInputStream inSocket = new ObjectInputStream(socket.getInputStream());
-			
-			//create our login message
-			Message loginMessage = new Message(HeaderEnum.login, CommandEnum.login, StatusEnum.toServer, "login request");
-			//send off login message through outSocket to server
-			outSocket.writeObject(loginMessage);
-		
-			//wait to receive login response 'success'
-			Message inboundMessage = (Message) inSocket.readObject();
-			
-			//check for login failure and end the program
-			if (!inboundMessage.getStatus().equals(StatusEnum.success)) {
-				System.out.println("Login Failure");
-				scanner.close();
-				return;
-			}
-			
-			//print login success message
-			System.out.println(inboundMessage.getText());
-			
-			 boolean loggedIn = true;
-	            while (loggedIn) {
-	                System.out.println("\nPlease select an option:");
-	                System.out.println("1. Create a new Member");
-	                System.out.println("2. Delete a Member");
-	                System.out.println("3. Check Member standing");
-	                System.out.println("4. View Member's rented items");
-	                System.out.println("5. Check Member's waitlisted items");
-	                System.out.println("6. Logout");
-	                
-	                int choice = 0;
-	                while (true) {
-	                    System.out.print("Enter choice (1-6): ");
-	                    if (scanner.hasNextInt()) {
-	                        choice = scanner.nextInt();
-	                        scanner.nextLine(); // consume newline
-	                        if (choice >= 1 && choice <= 6) {
-	                            break;
-	                        } else {
-	                            System.out.println("Invalid selection, number must be between 1 and 6.");
-	                        }
-	                    } else {
-	                        System.out.println("Invalid input. Please enter a number.");
-	                        scanner.next(); // consume invalid input
-	                    }
-	                }
-	                
-	                switch (choice) {
-	                    case 1: // Create new member
-	                        System.out.print("Enter member name: ");
-	                        String name = scanner.nextLine();
-	                        Message createMsg = new Message(HeaderEnum.member, CommandEnum.add, StatusEnum.toServer, name);
-	                        outSocket.writeObject(createMsg);
-	                        inboundMessage = (Message) inSocket.readObject();
-	                        System.out.println(inboundMessage.getText());
-	                        break;
-	                        
-	                    case 2: // Delete member
-	                        System.out.print("Enter member ID to delete: ");
-	                        String memberId = scanner.nextLine();
-	                        Message deleteMsg = new Message(HeaderEnum.member, CommandEnum.remove, StatusEnum.toServer, memberId);
-	                        outSocket.writeObject(deleteMsg);
-	                        inboundMessage = (Message) inSocket.readObject();
-	                        System.out.println(inboundMessage.getText());
-	                        break;
-	                        
-	                    case 3: // Check standing
-	                        System.out.print("Enter member ID to check standing: ");
-	                        memberId = scanner.nextLine();
-	                        Message standingMsg = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.toServer, memberId);
-	                        outSocket.writeObject(standingMsg);
-	                        inboundMessage = (Message) inSocket.readObject();
-	                        System.out.println(inboundMessage.getText());
-	                        break;
-	                        
-	                    case 4: // View rented items
-	                        System.out.print("Enter member ID to view rented items: ");
-	                        memberId = scanner.nextLine();
-	                        Message rentedMsg = new Message(HeaderEnum.member, CommandEnum.viewItems, StatusEnum.toServer, memberId);
-	                        outSocket.writeObject(rentedMsg);
-	                        inboundMessage = (Message) inSocket.readObject();
-	                        System.out.println(inboundMessage.getText());
-	                        break;
-	                        
-	                    case 5: // View waitlisted items
-	                        System.out.print("Enter member ID to view waitlisted items: ");
-	                        memberId = scanner.nextLine();
-	                        Message waitlistMsg = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.toServer, memberId);
-	                        outSocket.writeObject(waitlistMsg);
-	                        inboundMessage = (Message) inSocket.readObject();
-	                        System.out.println(inboundMessage.getText());
-	                        break;
-	                        
-	                    case 6: // Logout
-	                        Message logoutMsg = new Message(HeaderEnum.login, CommandEnum.logout, StatusEnum.toServer, "logout request");
-	                        outSocket.writeObject(logoutMsg);
-	                        inboundMessage = (Message) inSocket.readObject();
-	                        System.out.println(inboundMessage.getText());
-	                        loggedIn = false;
-	                        break;
-	                }
-	            }
-	            
-	            scanner.close();
-	        } catch (IOException | ClassNotFoundException e) {
-	            e.printStackTrace();
-	        }
-	        System.exit(0);
-	    }
+    private static final String serverAddress = "localhost"; // this is where we’re trying to connect to
+    private static final int Port = 7777; // the server is expected to be listening on this port
+    private static boolean isConnected = false; // just a simple flag to keep track of our connection status
+    private static Member member = null;
+
+    public static void main(String[] args) {
+        try (Socket socket = new Socket(serverAddress, Port);
+             ObjectOutputStream outSocket = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream inSocket = new ObjectInputStream(socket.getInputStream());
+             Scanner scanner = new Scanner(System.in)) {
+
+            isConnected = true; // we made it we’re connected
+            System.out.println("Connected to server at " + serverAddress + ":" + Port);
+
+            Message inboundMessage;
+            while (true) {
+            	inboundMessage = (Message) inSocket.readObject();
+                if(inboundMessage != null) {
+                	processMessage(inboundMessage, outSocket, inSocket, scanner);
+                }
+                
+                while (member != null) {
+                	displayMenu(); // show the menu
+                    int choice = getValidChoice(scanner, 2); // grab user input and validate it
+
+                    switch (choice) {
+                        case 1: { //add member
+                            System.out.print("Enter member name: "); // ask for a new member’s name
+                            String name = scanner.nextLine();
+                            Message createMsg = new Message(
+                            		Header.ACCT, 
+                            		Header.CREATE, 
+                            		name,
+                            		"client",
+                            		"server",
+                            		"server",
+                            		"client");
+                            outSocket.writeObject(createMsg); // send it off
+                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
+                            processMessage(inboundMessage, outSocket, inSocket, scanner);
+                            break;
+                        }
+
+                        case 2: {//search member
+                            System.out.print("Enter member ID to search: "); // ask who to search
+                            String memberId = scanner.nextLine();
+                            Message searchMsg = new Message(
+                            		Header.ACCT, 
+                            		Header.GET, 
+                            		memberId,
+                            		"client",
+                            		memberId,
+                            		"server",
+                            		"client");
+                            outSocket.writeObject(searchMsg);
+                            inboundMessage = (Message) inSocket.readObject();
+                            processMessage(inboundMessage, outSocket, inSocket, scanner);
+                            break;
+                        }
+
+                        case 3: {//add location
+                            System.out.print("Not Yet Implemented");
+                            break;
+                        }
+
+                        case 4: {//search a specific location
+                            System.out.print("Not Yet Implemented");
+                            break;
+                        }
+
+                        case 5: {//add an item
+                            System.out.print("Title: "); // ask for a new item title
+                            String title = scanner.nextLine();
+                            System.out.print("Year: "); // ask for a new item year
+                            String year = scanner.nextLine();
+                            System.out.print("Author: "); // ask for a new item author
+                            String author = scanner.nextLine();
+                            System.out.print("Quantity: "); // ask for a new item quantity
+                            String quant = scanner.nextLine();
+                            Message createMsg = new Message(
+                            		Header.INV, 
+                            		Header.CREATE, 
+                            		title + "," + year + "," + author + "," + quant,
+                            		"client",
+                            		"server",
+                            		"server",
+                            		"client");
+                            outSocket.writeObject(createMsg); // send it off
+                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
+                            processMessage(inboundMessage, outSocket, inSocket, scanner);
+                            break;
+                        }
+
+                        case 6: {//search a specific item
+                        	System.out.print("Title of item? : "); // ask for a new member’s name
+                            String title = scanner.nextLine();
+                            Message searchMsg = new Message(
+                            		Header.INV, 
+                            		Header.GET, 
+                            		title,
+                            		"client",
+                            		"server",
+                            		"server",
+                            		"client");
+                            outSocket.writeObject(searchMsg); // send it off
+                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
+                            processMessage(inboundMessage, outSocket, inSocket, scanner);
+                            break;
+                        }
+
+                        default: {
+                            System.out.println("Invalid option. Try again."); // just in case somehow it’s wrong
+                        }
+                    }
+                }
+            }
+
+        } catch (IOException | ClassNotFoundException e) {
+            isConnected = false; // we lost connection or had some issue
+            System.err.println("Error: " + e.getMessage());
+        } finally {
+            System.out.println("Client shutting down."); // always say goodbye
+            System.exit(0); // peace out
+        }
+    }
+    
+    private static void processMessage(Message msg, ObjectOutputStream out, ObjectInputStream in, Scanner scanner) {
+        switch (msg.getPrimaryHeader()) {
+            case Header.ACCT:
+                // Handle account-related messages
+                switch (msg.getSecondaryHeader()) {
+                    case Header.GET:
+                    	while (member == null) {
+                        System.out.println("Would you like to... \n1. Log in\n2. Sign up");
+                        String continueChoice = scanner.nextLine().trim();
+                        if ("1".equalsIgnoreCase(continueChoice)) {
+                        	System.out.println("Username: ");
+                            String u = scanner.nextLine();
+                            System.out.println("Password: ");
+                            String p = scanner.nextLine();
+
+                            Message loginMsg = new Message(
+                                Header.ACCT, 
+                                Header.LOGIN, 
+                                u + "," + p,  // Send user and password in the format "user,pass"
+                                "client",
+                                "login to existing user",
+                                "server",
+                                "client");
+
+                            try {
+                                // Send login message to server
+                                out.writeObject(loginMsg);
+                                out.flush();  // Ensure it's sent immediately
+                                System.out.println("Login request sent. Waiting for server response...");
+
+                                // Wait for server's acknowledgement message
+                                Message inboundMessage = (Message) in.readObject(); // Block until a response is received
+	                            processMessage(inboundMessage, out, in, scanner);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } catch (ClassNotFoundException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+                        }
+                        else if ("2".equalsIgnoreCase(continueChoice)) {
+                        	System.out.println("Name: ");
+                        	String name = scanner.nextLine();
+                        	
+                            Message createMsg = new Message(
+                            		Header.ACCT, 
+                            		Header.CREATE, 
+                            		name,
+                            		"client",
+                            		"new user",
+                            		"server",
+                            		"client");
+
+                            try {
+								out.writeObject(createMsg);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+                        }
+                    	}
+                    	break;
+
+                    case Header.CREATE:
+                        System.out.println("Account creation response received: " + msg.getData());
+                        break;
+                        
+                    case Header.DATA:
+                    	System.out.println(msg.getData().toString());
+                    	break;
+
+                    default:
+                        System.out.println("Unknown account action received.");
+                        break;
+                }
+                break;
+                
+            case Header.INV:
+            	//Handle inventory-related messages
+            	switch(msg.getSecondaryHeader()) {
+            	case Header.DATA:
+            		if(msg.getData() == null) {
+            			System.out.println("No inventory with that title");
+            		}
+            		else if (msg.getData() instanceof Item) {
+            			Item item = (Item) msg.getData();
+            			boolean checked = item.isCheckedOut();
+            			System.out.println("What would you like to do with this item?");
+            			if(checked) {
+            				System.out.println("1. Check in Item");
+            			}
+            			else {
+            				System.out.println("1. Check out Item");
+            			}
+            	        System.out.println("2. Reserve Item");
+            	        int choice = getValidChoice(scanner, 2);
+            	        
+            	        
+            		}
+            	}
+
+            case Header.NET:
+                // Handle network-related messages (e.g., ACK, ERR)
+                switch (msg.getSecondaryHeader()) {
+                    case Header.ACK:
+                    	System.out.println("Ack msg recieved");
+                        if (msg.getData() instanceof String) {
+                            System.out.println(msg.getData().toString());
+                        }
+                        else if (msg.getData() instanceof Member) {
+                            member = (Member) msg.getData();
+                            System.out.println("Login successful. Welcome, " + member.getName() + "!");
+                        }
+                        break;
+
+                    case Header.ERR:
+                        System.out.println("ERR: " + msg.getData());
+                        break;
+
+                    default:
+                        System.out.println("Unknown network action received.");
+                        break;
+                }
+                break;
+
+            default:
+                System.out.println("Unknown primary header received.");
+                break;
+        }
+        return;
+    }
+
+    private static void displayMenu() {
+        System.out.println("\nLibrary Member System - Select an option:");
+        System.out.println("1. Add Member");
+        System.out.println("2. Search Member");
+        System.out.println("3. Add Location");
+        System.out.println("4. Search Location");
+        System.out.println("5. Add Item");
+        System.out.println("6. Search Item");
+    }
+
+    private static int getValidChoice(Scanner scanner, int limit) {
+        int choice = -1; // start invalid
+        while (true) {
+            System.out.print("Enter choice (1-" + limit + "): ");
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine(); // eat newline so next input is clean
+                if (choice >= 1 && choice <= limit) {
+                    break; // we got a good number
+                } else {
+                    System.out.println("Invalid option. Please choose between 1 and 6.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.next(); // toss the bad input
+            }
+        }
+        return choice;
+    }
 }
