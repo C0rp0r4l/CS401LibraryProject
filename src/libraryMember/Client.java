@@ -1,4 +1,4 @@
-package scmot;
+package libraryMember;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

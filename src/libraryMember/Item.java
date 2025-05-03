@@ -1,8 +1,9 @@
 package libraryMember;
 
+import java.io.Serializable;
 import java.util.Random;
 
-public class Item {
+public class Item implements Serializable{
 	static private int count = 0;
 	private String itemID;
 	private String title;

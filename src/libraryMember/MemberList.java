@@ -30,6 +30,30 @@ public class MemberList {
 		return list;
 	}
 
+	public Member searchMember(String memberId) {
+	    int low = 0;
+	    int high = numMembers - 1;
+
+	    while (low <= high) {
+	        int mid = (low + high) / 2;
+	        int cmp = mArray[mid].getUserID().compareTo(memberId);
+
+	        if (cmp == 0) {
+	            return mArray[mid]; // Match found
+	        } else if (cmp < 0) {
+	            low = mid + 1; // Search right half
+	        } else {
+	            high = mid - 1; // Search left half
+	        }
+	    }
+
+	    return null; // Not found
+	}
+
+	public Integer getNumMembers() {
+		return numMembers;
+	}
+
 	public String getStrikes(String id) {
 		for(int i = 0; i < numMembers; i++) {
 			if(mArray[i].getUserID().compareTo(id) == 0) {
@@ -86,6 +110,7 @@ public class MemberList {
 				myWriter.write(mArray[i].toString() + "\n");
 			}
 		
+			modified = false;
 			myWriter.close();
 		} 
 		catch (Exception e) {
