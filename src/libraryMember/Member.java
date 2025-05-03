@@ -1,7 +1,5 @@
 package libraryMember;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class Member {
@@ -21,7 +19,7 @@ public class Member {
 		String namePrefix = name.length() >= 3 ? name.substring(0, 3) : name;
 		//now generate 3 random digits
 		Random rand = new Random();
-		//gives a random number between 100 and 999
+		//gives a random number between 10000 - 40000
 		int randomDigits = rand.nextInt(30000) + 10000;
 		//now append the random digits onto the name prefix for our new userID
 		this.userID = namePrefix + randomDigits + count;
@@ -58,30 +56,13 @@ public class Member {
 		return (name + "," + userID + "," + String.valueOf(strikes) + "," + String.valueOf(accountHold));
 	}
 	
-	/*
-	//get account standing
-	public String getStanding() {
-		String standingOutput = "Member account " + this.userID + " has " + this.strikes + " strikes.\n";
-		return standingOutput;
-	}*/
-	
 	// Returns the # of strikes as a string
 	public String getStrikes() {
 		return String.valueOf(strikes);
 	}
 	
 	// Returns true/false of the account hold as a string
-	public String getAccountHold() {
-		/*
-		if (accountHold == true) {
-			String accountHoldStatus = "Account " + this.userID + " is on hold.\n";
-			return accountHoldStatus;
-		}
-		else {
-			String accountHoldStatus = "Account " + this.userID + " is not on hold.\n";
-			return accountHoldStatus;
-		}*/
-		
+	public String getAccountHold() {		
 		return String.valueOf(accountHold);
 	}
 	
