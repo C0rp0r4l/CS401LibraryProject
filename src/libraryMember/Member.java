@@ -1,18 +1,23 @@
-package libraryMember;
+package scmot;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.io.Serializable;
 
-public class Member {
+public class Member implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	//variables
-	static private int count = 0;
 	private String userID;
-	//private String userPassword;
+	private String userPassword = generateRandomPass(5);
 	boolean accountHold;
 	private String name;
 	private int strikes;
-
+	private List<Item> checkedOutItems;
+	private List<Item> reservedItems;
 	
 	//methods
 	//constructor
@@ -22,23 +27,25 @@ public class Member {
 		//now generate 3 random digits
 		Random rand = new Random();
 		//gives a random number between 100 and 999
-		int randomDigits = rand.nextInt(30000) + 10000;
+		int randomDigits = rand.nextInt(900) + 100;
 		//now append the random digits onto the name prefix for our new userID
-		this.userID = namePrefix + randomDigits + count;
+		this.userID = namePrefix + randomDigits;
 		//now construct the rest of the variables
 		this.accountHold = false;
 		this.name = name;
 		this.strikes = 0;
-		
-		count++;
+		this.checkedOutItems = new ArrayList<>();
+		this.reservedItems = new ArrayList<>();
 		//REMEMBER THE MAIN WAY TO FIND A MEMBER IS WITH THE USERID
+		System.out.println("New Member: " + this.userID + " " + this.userPassword);
 	}
 	
 	// Constructor ONLY for loading already existing members from a file since ID is randomly generated
 	// name, userID, strikes, accountHold
-	public Member(String n, String uID, String s, String a) {
+	public Member(String n, String uID, String userPass, String s, String a) {
 		name = n;
 		userID = uID;
+		userPassword = userPass;
 		strikes = Integer.valueOf(s);
 		accountHold = Boolean.valueOf(a);
 	}
@@ -55,7 +62,7 @@ public class Member {
 	// Returns a string with format Name,userID,Strikes,accountHold 
 	// Example: Ricky Ip,RIC412,0,false
 	public String toString() {
-		return (name + "," + userID + "," + String.valueOf(strikes) + "," + String.valueOf(accountHold));
+		return (name + "," + userID + "," + userPassword + "," + String.valueOf(strikes) + "," + String.valueOf(accountHold));
 	}
 	
 	/*
@@ -97,4 +104,38 @@ public class Member {
 			this.accountHold = false;
 		}
 	}
+	
+	public String getPassword() {
+		return userPassword;
+	}
+	
+	//add items to accounts Checked out Items
+	public void checkoutItem() {
+		
+	}
+	
+	//add items to accounts reserved Items
+	public void reserveItem() {
+
+	}
+	
+	
+	//get account checked out items
+	public String getCheckedItems() {
+		return "";
+	}
+	
+    // Method to generate a random ID of specified length
+    private static String generateRandomPass(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        String result = "";
+
+        for (int i = 0; i < length; i++) {
+            int index = (int) (Math.random() * chars.length());
+            result += chars.charAt(index);
+        }
+
+        return result;
+    }
+	
 }
