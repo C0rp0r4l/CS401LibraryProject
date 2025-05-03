@@ -25,6 +25,19 @@ public class ItemList {
 			sourceName = "itemsInLibrary";
 		}
 	}
+
+	// If member isn't here then an empty string should be returned
+	public String listOfItemRentedByMember(String id) {
+		String list = "";
+
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].isMemberHere(id) == true) {
+				list.concat(iArray[i].getID());
+			}
+		}
+
+		return list;
+	}
 	
 	public String toString() {
 		String list = "";
@@ -73,7 +86,6 @@ public class ItemList {
 			return true;
 		}
 	}
-
 	
 	// Add an item with title, year, author, quantity 
 	public void addItem(String t, String y, String a, int q) {
@@ -106,6 +118,33 @@ public class ItemList {
 		}
 	}
 	
+	public String getTitle(String bookID) {
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].getID().compareTo(bookID) == 0) {
+				return iArray[i].getTitle();
+			}
+		}
+		return "Book not found";
+	}
+
+	public String getYear(String bookID) {
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].getID().compareTo(bookID) == 0) {
+				return iArray[i].getYear();
+			}
+		}
+		return "Book not found";
+	}
+	
+	public String getAuthor(String bookID) {
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].getID().compareTo(bookID) == 0) {
+				return iArray[i].getAuthor();
+			}
+		}
+		return "Book not found";
+	}
+
 	public void save() {
 		if(modified == false) {
 			return;

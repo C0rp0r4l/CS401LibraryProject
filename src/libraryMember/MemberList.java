@@ -29,6 +29,24 @@ public class MemberList {
 		}
 		return list;
 	}
+
+	public String getStrikes(String id) {
+		for(int i = 0; i < numMembers; i++) {
+			if(mArray[i].getUserID().compareTo(id) == 0) {
+				return mArray[i].getStrikes();
+			}
+		}
+		return "User not found";
+	}
+
+	public String getAccountHold(String id) {
+		for(int i = 0; i < numMembers; i++) {
+			if(mArray[i].getUserID().compareTo(id) == 0) {
+				return mArray[i].getAccountHold();
+			}
+		}
+		return "User not found";
+	}
 	
 	public void removeMember(String id) {
 		
@@ -54,7 +72,6 @@ public class MemberList {
 		mArray[numMembers] = temp;
 	}
 	
-	// INCOMPLETE ! Not sure how to format our save/load 
 	public void saveList() {
 		if(modified == false) {
 			return;
@@ -76,7 +93,6 @@ public class MemberList {
 		}
 	}
 	
-	// INCOMPLETE ! Not sure how to format our save/load for items as well
 	public void loadList() {
 		File file = new File(sourceName);
 		try {

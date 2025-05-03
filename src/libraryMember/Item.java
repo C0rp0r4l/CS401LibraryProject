@@ -60,6 +60,15 @@ public class Item {
 		return false;
 	}
 	
+	public Boolean isMemberHere(String id) {
+		for(int i = 0; i < numMember; i++) { 
+			if(memberList[i].compareTo(id) == 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	// Print out the attributes seperated by comma and the number of owners + list of members
 	// number of owners is important because we need to somehow know the number of strings to parse
 	// while saving or loading.
