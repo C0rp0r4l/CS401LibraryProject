@@ -1,184 +1,268 @@
 package libraryMember;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
+import java.net.*;
 
-
-public class Server {
-	//port number goes here
-	private static int port = 7777;
+// Server class
+class Server {
 	
-	//Lists of various objects the server must keep track of
-	//all registered library members
-	private static List<Member> members = new ArrayList<>();
-	//all library locations
-	//List<Location> Locations;
-	
-		
-	public static void main(String[] args) {
-			try (ServerSocket ss = new ServerSocket(port)){
-				//loop to create new threads for each new client that connects
-				while (true) {
-					//accept incoming client connections and print their addresses
-					Socket clientSocket = ss.accept();
-					System.out.println("New client connected " + clientSocket.getInetAddress());
-					
-					//create client handler for the client socket
-					ClientHandler clientHandler = new ClientHandler(clientSocket);
-					
-					//create a new thread to 'run' the client handler
-					new Thread(clientHandler).start();
-					
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		//clientHandler class
-		private static class ClientHandler implements Runnable {
-		        private Socket clientSocket;
-		        private boolean loggedIn = false;
-		        
-		        //ClientHandler Constructor is fed a socket argument
-		        public ClientHandler(Socket socket) {
-		            //assign the argument socket to the clientSocket inside the CklientHandler
-		        	this.clientSocket = socket;
-		        }
+    private static MemberList memberList = new MemberList();
+    private static ItemList rentalList = new ItemList(itemListType.Rental);
+    private static ItemList reservationList = new ItemList(itemListType.Reservation);
+    
+    public static void main(String[] args) {
+        ServerSocket server = null;
 
-		        @Override
-		        public void run() {
-		            try (ObjectOutputStream outSocket = new ObjectOutputStream(clientSocket.getOutputStream());
-		                 ObjectInputStream inSocket = new ObjectInputStream(clientSocket.getInputStream())) {
-		                
-		                while (true) {
-		                    Message inboundMessage = (Message) inSocket.readObject();
-		                    
-		                    switch (inboundMessage.getHeader()) {
-		                        case login:
-		                            handleLogin(inboundMessage, outSocket);
-		                            break;
-		                            
-		                        case member:
-		                            if (!loggedIn) {
-		                                sendError(outSocket, "Please login first");
-		                                break;
-		                            }
-		                            handleMemberOperations(inboundMessage, outSocket);
-		                            break;
-		                            
-		                        case logout:
-		                            handleLogout(outSocket);
-		                            return;
-		                            
-		                        default:
-		                            sendError(outSocket, "Invalid message type");
-		                    }
-		                }
-		            } catch (IOException | ClassNotFoundException e) {
-		                System.out.println("Client disconnected: " + e.getMessage());
-		            } finally {
-		                try {
-		                    clientSocket.close();
-		                } catch (IOException e) {
-		                    e.printStackTrace();
-		                }
-		            }
-		        }
-		        
-		        private void handleLogin(Message msg, ObjectOutputStream outSocket) throws IOException {
-		            loggedIn = true;
-		            Message response = new Message(HeaderEnum.login, CommandEnum.login, StatusEnum.success, "Login successful");
-		            outSocket.writeObject(response);
-		            outSocket.flush();
-		        }
-		        
-		        private void handleMemberOperations(Message msg, ObjectOutputStream outSocket) throws IOException {
-		            CommandEnum command = msg.getcommands();
-		            String text = msg.getText();
-		            Message response;
-		            
-		            try {
-		                switch (command) {
-		                    case add:
-		                        Member newMember = new Member(text);
-		                        members.add(newMember);
-		                        response = new Message(HeaderEnum.member, CommandEnum.add, StatusEnum.success, 
-		                                            "Member created successfully. ID: " + newMember.getUserID());
-		                        break;
-		                        
-		                    case remove:
-		                        Member toRemove = findMember(text);
-		                        if (toRemove != null) {
-		                            members.remove(toRemove);
-		                            response = new Message(HeaderEnum.member, CommandEnum.remove, StatusEnum.success, 
-		                                                "Member " + text + " removed successfully");
-		                        } else {
-		                            response = new Message(HeaderEnum.member, CommandEnum.remove, StatusEnum.failure, 
-		                                                "Member " + text + " not found");
-		                        }
-		                        break;
-		                        
-		                    case getStanding:
-		                        Member member = findMember(text);
-		                        if (member != null) {
-		                            response = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.success, 
-		                                                  member.getStanding() + "\n" + member.getAccountHold());
-		                        } else {
-		                            response = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.failure, 
-		                                                "Member " + text + " not found");
-		                        }
-		                        break;
-		                        
-		                    case viewItems:
-		                        member = findMember(text);
-		                        if (member != null) {
-		                            String items = member.getCheckedItems();
-		                            response = new Message(HeaderEnum.member, CommandEnum.viewItems, StatusEnum.success, 
-		                                                items.isEmpty() ? "No items checked out" : items);
-		                        } else {
-		                            response = new Message(HeaderEnum.member, CommandEnum.viewItems, StatusEnum.failure, 
-		                                                "Member " + text + " not found");
-		                        }
-		                        break;
-		                        
-		                    default:
-		                        response = new Message(HeaderEnum.member, command, StatusEnum.failure, 
-		                                            "Unsupported operation");
-		                }
-		                
-		                outSocket.writeObject(response);
-		                outSocket.flush();
-		            } catch (Exception e) {
-		                sendError(outSocket, "Error processing request: " + e.getMessage());
-		            }
-		        }
-		        
-		        private void handleLogout(ObjectOutputStream outSocket) throws IOException {
-		            loggedIn = false;
-		            Message response = new Message(HeaderEnum.login, CommandEnum.logout, StatusEnum.success, "Logout successful");
-		            outSocket.writeObject(response);
-		            outSocket.flush();
-		        }
-		        
-		        private void sendError(ObjectOutputStream outSocket, String errorMsg) throws IOException {
-		            Message error = new Message(HeaderEnum.login, CommandEnum.login, StatusEnum.failure, errorMsg);
-		            outSocket.writeObject(error);
-		            outSocket.flush();
-		        }
-		        
-		        private Member findMember(String userID) {
-		            for (Member member : members) {
-		                if (member.getUserID().equals(userID)) {
-		                    return member;
-		                }
-		            }
-		            return null;
-		        }
-		    }
-		}
+        try {
+            // Server is listening on port 7777
+            server = new ServerSocket(7777);
+            server.setReuseAddress(true);
+            
+            memberList.loadList();
+
+            // Running infinite loop for getting client requests
+            while (true) {
+                // Socket object to receive incoming client requests
+                Socket client = server.accept();
+
+                // Displaying that a new client is connected to the server
+                System.out.println("New client connected"
+                        + client.getInetAddress().getHostAddress());
+
+                // Create a new thread object to handle the client separately
+                ClientHandler clientSock = new ClientHandler(client, memberList);
+
+                // Start the client handler thread
+                new Thread(clientSock).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (server != null) {
+                try {
+                    server.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    // ClientHandler class
+    private static class ClientHandler implements Runnable {
+        private final Socket clientSocket;
+        private final MemberList memberList;
+
+        public ClientHandler(Socket socket, MemberList memberList) {
+            this.clientSocket = socket;
+            this.memberList = memberList;
+        }
+
+        public void run() {
+            ObjectOutputStream out = null;
+            ObjectInputStream in = null;
+
+            try {
+                // Get the output stream of the client
+                out = new ObjectOutputStream(clientSocket.getOutputStream());
+                out.flush();  // Ensure the output stream is flushed
+
+                // Get the input stream of the client
+                in = new ObjectInputStream(clientSocket.getInputStream());
+
+                // Send a message requesting login information from the client
+                Message requestLoginMessage = new Message(
+                    Header.ACCT,
+                    Header.GET,
+                    "Please provide login credentials",  // data indicating the request for login
+                    "server",
+                    "client",
+                    "client",
+                    "server"
+                );
+                out.writeObject(requestLoginMessage);
+                out.flush();  // Ensure the message is sent immediately
+                System.out.println("Sent login request to client.");
+                
+                        while (true) {
+                            Object obj = in.readObject();
+                            if (!(obj instanceof Message)) {
+                                System.out.println("Received unknown object type");
+                                continue;
+                            }
+
+                            Message msg = (Message) obj;
+                            System.out.println("Recieved Message " + msg.getPrimaryHeader());
+                            Message response;
+
+                            // Primary header switch (INV, ACC, LOC, ITEM, NET)
+                            switch (msg.getPrimaryHeader()) {
+                                case Header.INV:
+                                    // Handle Inventory-related actions
+                                    response = handleInventoryActions(msg);
+                                    out.writeObject(response);
+                                    break;
+
+                                case Header.ACCT:
+                                    // Account Management-specific actions (Create, Delete, Status, Edit, Get, Data)
+                                    response = handleAccountActions(msg);
+                                    out.writeObject(response);
+                                    break;
+
+                                case Header.LOC:
+                                    // Handle Location-related actions
+                                    response = handleLocationActions(msg);
+                                    out.writeObject(response);
+                                    break;
+
+                                case Header.ITEM:
+                                    // Handle Item Attention-related actions
+                                    response = handleItemActions(msg);
+                                    out.writeObject(response);
+                                    break;
+
+                                case Header.NET:
+                                    // Handle Network-related actions
+                                    response = handleNetworkActions(msg);
+                                    out.writeObject(response);
+                                    break;
+
+                                default:
+                                    System.out.println("Unknown primary header received.");
+                                    response = new Message(Header.NET, Header.ERR, "Unknown request", "server", "client", "server", "client");
+                                    out.writeObject(response);
+                                    break;
+                            }
+                        }
+                    } catch (IOException | ClassNotFoundException e) {
+                        e.printStackTrace();
+                    } finally {
+                        try {
+                            clientSocket.close();
+                            System.out.println("Connection closed.");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+                private Message handleInventoryActions(Message msg) {
+                    Message response = null;
+
+                    switch (msg.getSecondaryHeader()) {
+					
+                    }
+                    return response;
+                }
+
+                private Message handleAccountActions(Message msg) {
+                    Message response = null;
+
+					switch (msg.getSecondaryHeader()) {
+					case Header.CREATE:
+					    System.out.println("Creating Account for client " + msg.getFrom() + " " + msg.getData());
+
+					    String name = msg.getData().toString().trim();
+					    if (name.isEmpty()) {
+					        System.out.println("Invalid name provided.");
+					        response = new Message(Header.NET, Header.ERR, null, "server", "client", "client", "server");
+					        break;
+					    }
+
+					    // Generate new member using just the name
+					    Member newMember = new Member(name);
+
+					    // Check if userID already exists (assuming userID is generated inside Member(name))
+					    boolean exists = false;
+					    for (int i = 0; i < memberList.getNumMembers(); i++) {
+					        if (memberList.getIndex(i).getUserID().equalsIgnoreCase(newMember.getUserID())) {
+					            exists = true;
+					            break;
+					        }
+					    }
+
+					    if (exists) {
+					        System.out.println("Account already exists for userID: " + newMember.getUserID());
+					        response = new Message(Header.NET, Header.ERR, null, "server", "client", "client", "server");
+					        break;
+					    }
+
+					    // Add, save, and acknowledge
+					    memberList.addMember(newMember);
+					    memberList.setModified(true);
+
+					    response = new Message(Header.NET, Header.ACK, newMember.toString(), "server", "client", "client", "server");
+					    break;
+
+                        case Header.DELETE:
+                            // Handle Account deletion
+                            response = new Message(Header.NET, Header.ACK, "Account Deleted", "server", "client", "client", "server");
+                            break;
+
+                        case Header.STATUS:
+                            // Handle Account status change by first finding account by id and then changing status to status
+                            response = new Message(Header.NET, Header.ACK, "Account Status Change", "server", "client", "client", "server");
+                            break;
+                            
+                        case Header.LOGIN:
+                            String msgData = msg.getData().toString();  // Get the data from the message
+                            String[] credentials = msgData.split(",");  // Split the string at the comma
+
+                            if (credentials.length == 2) {
+                                String user = credentials[0];  // First part before the comma
+                                String pass = credentials[1];  // Second part after the comma
+
+                                // Attempt login
+                                Object goodCred = memberList.attemptLogin(user, pass);
+                                
+                                if(goodCred == null) {
+                                	System.out.println("Wrong Password");
+                                    response = new Message(Header.NET, Header.ERR, "Wrong Password", "server", "client", "client", "server");
+                                }
+                                else if(goodCred instanceof Member) {
+                                	System.out.println("Successful client login");
+                                    response = new Message(Header.NET, Header.ACK, goodCred, "server", "client", "client", "server");
+                                }
+                                else if(goodCred.toString().equals("1")) {
+                                	System.out.println("That User doesnt exist");
+                                    response = new Message(Header.NET, Header.ERR, "That user doesnt exist", "server", "client", "client", "server");
+                                }
+                            }
+                            break;
+
+                        	
+                        case Header.EDIT:
+                            // Handle Account edit by overwriting current account with msg.getData() which should be a member
+                            response = new Message(Header.NET, Header.ACK, "Account Edited", "server", "client", "client", "server");
+                            break;
+
+                        case Header.GET:
+                            // Handle Account data retrieval
+                            response = new Message(Header.ACCT, Header.DATA, memberList.searchMember(msg.getData().toString()), "server", "client", "client", "server");
+                            break;
+
+                        default:
+                            //Send Error
+                            response = new Message(Header.NET, Header.ERR, "Unknown secondary header for Account Management", "server", "client", "server", "client");
+
+                            break;
+                    }
+                    return response;
+                }
+
+                private Message handleLocationActions(Message msg) {
+                    // Handle Location-related actions here
+                    return new Message(Header.NET, Header.ACK, "Location action executed", "server", "client", "server", "client");
+                }
+
+                private Message handleItemActions(Message msg) {
+                    // Handle Item Attention-related actions here
+                    return new Message(Header.NET, Header.ACK, "Item action executed", "server", "client", "server", "client");
+                }
+
+                private Message handleNetworkActions(Message msg) {
+                    // Handle Network-related actions here
+                    return new Message(Header.NET, Header.ACK, "Network action executed", "server", "client", "server", "client");
+                }
+            }
+        }

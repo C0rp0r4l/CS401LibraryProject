@@ -1,15 +1,14 @@
 package libraryMember;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
 public class Client {
-    private static final String serverAddress = "localhost"; // this is where we’re trying to connect to
-    private static final int Port = 7777; // the server is expected to be listening on this port
-    private static boolean isConnected = false; // just a simple flag to keep track of our connection status
+    private static final String serverAddress = "localhost";
+    private static final int Port = 7777;
+    private static boolean isConnected = false;
+    private static Member member = null;
 
     public static void main(String[] args) {
         try (Socket socket = new Socket(serverAddress, Port);
@@ -17,131 +16,181 @@ public class Client {
              ObjectInputStream inSocket = new ObjectInputStream(socket.getInputStream());
              Scanner scanner = new Scanner(System.in)) {
 
-            isConnected = true; // we made it we’re connected
+            isConnected = true;
             System.out.println("Connected to server at " + serverAddress + ":" + Port);
 
-            // we send a login message as soon as the client starts
-            Message loginMessage = new Message(HeaderEnum.login, CommandEnum.login, StatusEnum.toServer, "login request");
-            outSocket.writeObject(loginMessage);
-
-            // now we wait to see if the server says we’re good to go
             Message inboundMessage = (Message) inSocket.readObject();
-            if (!inboundMessage.getStatus().equals(StatusEnum.success)) {
-                System.out.println("Login Failure: " + inboundMessage.getText()); // nope didn’t work
-                isConnected = false;
-                return;
-            }
+            processMessage(inboundMessage, outSocket, inSocket, scanner);
 
-            System.out.println("Login Successful: " + inboundMessage.getText()); // nice we’re in
+            while (member == null) {
+                System.out.println("Would you like to... \n1. Log in\n2. Sign up");
+                String choice = scanner.nextLine().trim();
 
-            boolean loggedIn = true; // we stay in this loop until the user logs out
-            while (loggedIn) {
-                displayMenu(); // show the menu
-                int choice = getValidChoice(scanner); // grab user input and validate it
+                if ("1".equals(choice)) {
+                    System.out.print("Username: ");
+                    String u = scanner.nextLine();
+                    System.out.print("Password: ");
+                    String p = scanner.nextLine();
 
-                switch (choice) {
-                    case 1: {
-                        System.out.print("Enter member name: "); // ask for a new member’s name
-                        String name = scanner.nextLine();
-                        Message createMsg = new Message(HeaderEnum.member, CommandEnum.add, StatusEnum.toServer, name);
-                        outSocket.writeObject(createMsg); // send it off
-                        inboundMessage = (Message) inSocket.readObject(); // wait for reply
-                        System.out.println(inboundMessage.getText()); // show result
-                        break;
-                    }
+                    Message loginMsg = new Message(
+                            Header.ACCT, Header.LOGIN, u + "," + p,
+                            "client", "login", "server", "client"
+                    );
+                    outSocket.writeObject(loginMsg);
+                    outSocket.flush();
+                    inboundMessage = (Message) inSocket.readObject();
+                    processMessage(inboundMessage, outSocket, inSocket, scanner);
 
-                    case 2: {
-                        System.out.print("Enter member ID to delete: "); // ask who to remove
-                        String memberId = scanner.nextLine();
-                        Message deleteMsg = new Message(HeaderEnum.member, CommandEnum.remove, StatusEnum.toServer, memberId);
-                        outSocket.writeObject(deleteMsg);
-                        inboundMessage = (Message) inSocket.readObject();
-                        System.out.println(inboundMessage.getText());
-                        break;
-                    }
-
-                    case 3: {
-                        System.out.print("Enter member ID to check standing: "); // check if a member is in good standing
-                        String memberId = scanner.nextLine();
-                        Message standingMsg = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.toServer, memberId);
-                        outSocket.writeObject(standingMsg);
-                        inboundMessage = (Message) inSocket.readObject();
-                        System.out.println(inboundMessage.getText());
-                        break;
-                    }
-
-                    case 4: {
-                        System.out.print("Enter member ID to view rented items: "); // what’s currently rented
-                        String memberId = scanner.nextLine();
-                        Message rentedMsg = new Message(HeaderEnum.member, CommandEnum.viewItems, StatusEnum.toServer, memberId);
-                        outSocket.writeObject(rentedMsg);
-                        inboundMessage = (Message) inSocket.readObject();
-                        System.out.println(inboundMessage.getText());
-                        break;
-                    }
-
-                    case 5: {
-                        System.out.print("Enter member ID to view waitlisted items: "); // any items the member is waiting for
-                        String memberId = scanner.nextLine();
-                        Message waitlistMsg = new Message(HeaderEnum.member, CommandEnum.getStanding, StatusEnum.toServer, memberId);
-                        outSocket.writeObject(waitlistMsg);
-                        inboundMessage = (Message) inSocket.readObject();
-                        System.out.println(inboundMessage.getText());
-                        break;
-                    }
-
-                    case 6: {
-                        Message logoutMsg = new Message(HeaderEnum.login, CommandEnum.logout, StatusEnum.toServer, "logout request");
-                        outSocket.writeObject(logoutMsg); // tell server we’re leaving
-                        inboundMessage = (Message) inSocket.readObject();
-                        System.out.println(inboundMessage.getText());
-                        loggedIn = false; // end loop
-                        isConnected = false;
-                        break;
-                    }
-
-                    default: {
-                        System.out.println("Invalid option. Try again."); // just in case somehow it’s wrong
-                    }
+                } else if ("2".equals(choice)) {
+                    System.out.print("Name: ");
+                    String name = scanner.nextLine();
+                    Message createMsg = new Message(
+                            Header.ACCT, Header.CREATE, name,
+                            "client", "new", "server", "client"
+                    );
+                    outSocket.writeObject(createMsg);
+                    outSocket.flush();
+                    inboundMessage = (Message) inSocket.readObject();
+                    processMessage(inboundMessage, outSocket, inSocket, scanner);
                 }
             }
 
-        } catch (IOException | ClassNotFoundException e) {
-            isConnected = false; // we lost connection or had some issue
-            System.err.println("Error: " + e.getMessage());
-        } finally {
-            System.out.println("Client shutting down."); // always say goodbye
-            System.exit(0); // peace out
+            // Now you're logged in
+            while (member != null) {
+                displayMenu();
+                int choice = getValidChoice(scanner, 6);
+
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter member name: ");
+                        String name = scanner.nextLine();
+                        Message addMsg = new Message(
+                                Header.ACCT, Header.CREATE, name,
+                                "client", "server", "server", "client"
+                        );
+                        outSocket.writeObject(addMsg);
+                        processMessage((Message) inSocket.readObject(), outSocket, inSocket, scanner);
+                        break;
+
+                    case 2:
+                        System.out.print("Enter member ID to search: ");
+                        String id = scanner.nextLine();
+                        Message getMsg = new Message(
+                                Header.ACCT, Header.GET, id,
+                                "client", id, "server", "client"
+                        );
+                        outSocket.writeObject(getMsg);
+                        processMessage((Message) inSocket.readObject(), outSocket, inSocket, scanner);
+                        break;
+
+                    case 3:
+                    case 4:
+                        System.out.println("Not Yet Implemented");
+                        break;
+
+                    case 5:
+                        System.out.print("Title: ");
+                        String title = scanner.nextLine();
+                        System.out.print("Year: ");
+                        String year = scanner.nextLine();
+                        System.out.print("Author: ");
+                        String author = scanner.nextLine();
+                        System.out.print("Quantity: ");
+                        String quantity = scanner.nextLine();
+                        Message itemMsg = new Message(
+                                Header.INV, Header.CREATE, title + "," + year + "," + author + "," + quantity,
+                                "client", "server", "server", "client"
+                        );
+                        outSocket.writeObject(itemMsg);
+                        Object response = inSocket.readObject();
+                        if (response instanceof Message) {
+                            processMessage((Message) response, outSocket, inSocket, scanner);
+                        } else {
+                            System.out.println("Server sent null or invalid response.");
+                        }
+                        break;
+
+                    case 6:
+                        System.out.print("Title of item: ");
+                        String search = scanner.nextLine();
+                        Message searchItemMsg = new Message(
+                                Header.INV, Header.GET, search,
+                                "client", "server", "server", "client"
+                        );
+                        outSocket.writeObject(searchItemMsg);
+                        Object obj = inSocket.readObject();
+                        if (obj instanceof Message msgResponse) {
+                            processMessage(msgResponse, outSocket, inSocket, scanner);
+                        } else {
+                            System.out.println("Invalid response from server.");
+                        }
+                        break;
+
+                    default:
+                        System.out.println("Invalid option.");
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Client error: " + e.getMessage());
+        }
+    }
+
+    private static void processMessage(Message msg, ObjectOutputStream out, ObjectInputStream in, Scanner scanner) {
+        switch (msg.getPrimaryHeader()) {
+            case NET:
+                if (Header.ACK.equals(msg.getSecondaryHeader())) {
+                    if (msg.getData() instanceof Member m) {
+                        member = m;
+                        System.out.println("Login successful. Welcome, " + m.getName() + "!");
+                    } else {
+                        System.out.println("ACK: " + msg.getData());
+                    }
+                } else if (Header.ERR.equals(msg.getSecondaryHeader())) {
+                    System.out.println("Error: " + msg.getData());
+                }
+                break;
+
+            case ACCT:
+                if (Header.CREATE.equals(msg.getSecondaryHeader())) {
+                    System.out.println("Account created: " + msg.getData());
+                } else if (Header.DATA.equals(msg.getSecondaryHeader())) {
+                    System.out.println("Account info: " + msg.getData());
+                }
+                break;
+
+            case INV:
+                if (Header.DATA.equals(msg.getSecondaryHeader())) {
+                    System.out.println("Inventory: " + msg.getData());
+                }
+                break;
+
+            default:
+                System.out.println("Unknown response.");
         }
     }
 
     private static void displayMenu() {
         System.out.println("\nLibrary Member System - Select an option:");
-        System.out.println("1. Create a new Member");
-        System.out.println("2. Delete a Member");
-        System.out.println("3. Check Member standing");
-        System.out.println("4. View Member's rented items");
-        System.out.println("5. View Member's waitlisted items");
-        System.out.println("6. Logout");
+        System.out.println("1. Add Member");
+        System.out.println("2. Search Member");
+        System.out.println("3. Add Location");
+        System.out.println("4. Search Location");
+        System.out.println("5. Add Item");
+        System.out.println("6. Search Item");
     }
 
-    private static int getValidChoice(Scanner scanner) {
-        int choice = -1; // start invalid
+    private static int getValidChoice(Scanner scanner, int limit) {
         while (true) {
-            System.out.print("Enter choice (1-6): ");
+            System.out.print("Enter choice (1-" + limit + "): ");
             if (scanner.hasNextInt()) {
-                choice = scanner.nextInt();
-                scanner.nextLine(); // eat newline so next input is clean
-                if (choice >= 1 && choice <= 6) {
-                    break; // we got a good number
-                } else {
-                    System.out.println("Invalid option. Please choose between 1 and 6.");
-                }
+                int choice = scanner.nextInt();
+                scanner.nextLine(); 
+                if (choice >= 1 && choice <= limit) return choice;
             } else {
-                System.out.println("Invalid input. Please enter a number.");
-                scanner.next(); // toss the bad input
+                scanner.next(); // toss invalid input
             }
+            System.out.println("Invalid option.");
         }
-        return choice;
     }
 }
