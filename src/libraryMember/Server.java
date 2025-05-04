@@ -7,6 +7,8 @@ import java.net.*;
 class Server {
 	
     private static MemberList memberList = new MemberList();
+    private static LocationList locationList = new LocationList();
+    
     private static ItemList rentalList = new ItemList(itemListType.Rental);
     private static ItemList reservationList = new ItemList(itemListType.Reservation);
     
