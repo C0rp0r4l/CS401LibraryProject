@@ -2,148 +2,222 @@ package libraryMember;
 
 import java.io.*;
 import java.net.Socket;
-
+import javax.swing.*;
+import java.awt.CardLayout; 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+import javax.swing.*;
+import java.awt.*;
+import java.io.*;
+import java.net.Socket;
 
-public class ClientGUI {
+public class ClientGUI extends JFrame {
 
-    private static final String serverAddress = "localhost"; // this is where the server is supposed to be running
-    private static final int Port = 7777; // the port number the server is listening on
-    private boolean isConnected = false; // flag to keep track of whether we’re currently connected
+    private JPanel mainPanel;
+    private CardLayout cardLayout;
 
-    private Socket socket; // the connection itself
-    private ObjectOutputStream outSocket; // this is how we’ll send messages to the server
-    private ObjectInputStream inSocket; // and this is how we’ll receive messages back
+    private JTextField userIdField;
+    private JPasswordField passwordField;
+    private JLabel statusLabel;
+    private JTextArea outputArea;
 
-    private JFrame frame; // the main window for our GUI
-    private JTextArea outputArea; // this is the box that shows output like server responses
+    private ObjectOutputStream outSocket;
+    private ObjectInputStream inSocket;
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(ClientGUI::new); // this makes sure our GUI launches on the correct thread
-    }
+    private Member loggedInMember = null;
 
     public ClientGUI() {
-        setupGUI(); // set up all the GUI components
-        connectToServer(); // try to establish a connection to the backend server
-        performLogin(); // immediately try to log in once connected
+        setTitle("Library Client System");
+        setSize(500, 400);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        initNetwork();
+        buildGUI();
+        setVisible(true);
     }
 
-    private void setupGUI() {
-        frame = new JFrame("Library Member Client"); // make the main window
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // close everything on exit
-        frame.setSize(500, 400); // reasonable default window size
-
-        outputArea = new JTextArea(); // this is where feedback gets printed
-        outputArea.setEditable(false); // we don’t want users typing in this area
-        JScrollPane scrollPane = new JScrollPane(outputArea); // makes the output scrollable if it gets long
-
-        JPanel buttonPanel = new JPanel(); // this panel holds all the action buttons
-        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS)); // stack buttons vertically
-
-        buttonPanel.add(makeButton("1. Create Member", () -> promptAndSend("Enter new member name:", CommandEnum.add)));
-        buttonPanel.add(makeButton("2. Delete Member", () -> promptAndSend("Enter member ID to delete:", CommandEnum.remove)));
-        buttonPanel.add(makeButton("3. Check Standing", () -> promptAndSend("Enter member ID:", CommandEnum.getStanding)));
-        buttonPanel.add(makeButton("4. View Rented Items", () -> promptAndSend("Enter member ID:", CommandEnum.viewItems)));
-        buttonPanel.add(makeButton("5. View Waitlisted Items", () -> promptAndSend("Enter member ID:", CommandEnum.getStanding))); // placeholder reused
-        buttonPanel.add(makeButton("6. Logout", this::logout)); // exits the session
-
-        JPanel mainPanel = new JPanel(); // the top level panel that holds everything
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS)); // vertical layout for scroll area and buttons
-        mainPanel.add(scrollPane); // add the output box first
-        mainPanel.add(buttonPanel); // then the action buttons
-
-        frame.setContentPane(mainPanel); // tell the frame to use our main panel
-        frame.setVisible(true); // show the window
-    }
-
-    private JButton makeButton(String label, Runnable action) {
-        JButton button = new JButton(label); // make a button with text
-        button.addActionListener(e -> action.run()); // run the given action when clicked
-        button.setAlignmentX(JComponent.CENTER_ALIGNMENT); // center it nicely in layout
-        return button;
-    }
-
-    private void connectToServer() {
+    private void initNetwork() {
         try {
-            socket = new Socket(serverAddress, Port); // try to connect to the server
-            outSocket = new ObjectOutputStream(socket.getOutputStream()); // prepare to send
-            inSocket = new ObjectInputStream(socket.getInputStream()); // prepare to receive
-            isConnected = true; // we’re good
-            log("Connected to server at " + serverAddress + ":" + Port); // feedback for user
-        } catch (IOException e) {
-            log("Connection failed: " + e.getMessage()); // couldn’t connect
-            showErrorAndExit("Could not connect to server"); // show a popup and shut down
+            Socket socket = new Socket("localhost", 7777);
+            outSocket = new ObjectOutputStream(socket.getOutputStream());
+            inSocket = new ObjectInputStream(socket.getInputStream());
+            System.out.println("Connected to server.");
+            Message initial = (Message) inSocket.readObject();
+            if (!initial.getPrimaryHeader().equals(Header.ACCT)) {
+                throw new IOException("Unexpected initial message from server.");
+            }
+        } catch (Exception e) {
+            showError("Failed to connect or handshake with server: " + e.getMessage());
+            System.exit(1);
         }
     }
 
-    private void performLogin() {
-        try {
-            Message loginMsg = new Message(HeaderEnum.login, CommandEnum.login, StatusEnum.toServer, "login request"); // build the login message
-            sendMessage(loginMsg); // send it
-            Message response = (Message) inSocket.readObject(); // wait for reply
+    private void buildGUI() {
+        mainPanel = new JPanel();
+        cardLayout = new CardLayout();
+        mainPanel.setLayout(cardLayout);
+        buildLoginScreen();
+        buildMainScreen();
+        add(mainPanel);
+        cardLayout.show(mainPanel, "Login");
+    }
 
-            if (response.getStatus() == StatusEnum.success) {
-                log("Login successful: " + response.getText()); // great we’re in
+    private void buildLoginScreen() {
+        JPanel loginPanel = new JPanel();
+        loginPanel.setLayout(new BoxLayout(loginPanel, BoxLayout.Y_AXIS));
+        loginPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
+
+        JLabel titleLabel = new JLabel("Library Login");
+        titleLabel.setAlignmentX(CENTER_ALIGNMENT);
+
+        userIdField = new JTextField();
+        userIdField.setColumns(1);
+        passwordField = new JPasswordField();
+        passwordField.setColumns(1);
+        
+        statusLabel = new JLabel(" ");
+        statusLabel.setAlignmentX(CENTER_ALIGNMENT);
+
+        JButton loginBtn = new JButton("Login");
+        JButton signupBtn = new JButton("Sign Up");
+
+        loginBtn.setAlignmentX(CENTER_ALIGNMENT);
+        signupBtn.setAlignmentX(CENTER_ALIGNMENT);
+
+        loginBtn.addActionListener(e -> loginUser());
+        signupBtn.addActionListener(e -> signupUser());
+
+        loginPanel.add(titleLabel);
+        loginPanel.add(Box.createVerticalStrut(10));
+        loginPanel.add(new JLabel("User ID:"));
+        loginPanel.add(userIdField);
+        loginPanel.add(Box.createVerticalStrut(10));
+        loginPanel.add(new JLabel("Password:"));
+        loginPanel.add(passwordField);
+        loginPanel.add(Box.createVerticalStrut(10));
+        loginPanel.add(loginBtn);
+        loginPanel.add(signupBtn);
+        loginPanel.add(Box.createVerticalStrut(10));
+        loginPanel.add(statusLabel);
+
+        mainPanel.add(loginPanel, "Login");
+    }
+
+    private void buildMainScreen() {
+        JPanel main = new JPanel();
+        main.setLayout(new BoxLayout(main, BoxLayout.Y_AXIS));
+        main.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
+
+        JLabel label = new JLabel("Welcome to Library System");
+        label.setAlignmentX(CENTER_ALIGNMENT);
+        main.add(label);
+
+        String[] actions = {
+            "Add Member", "Search Member",
+            "Add Item", "Search Item",
+            "Add Location", "Search Location"
+        };
+
+        for (String action : actions) {
+            JButton button = new JButton(action);
+            button.setAlignmentX(CENTER_ALIGNMENT);
+            button.addActionListener(e -> handleAction(action));
+            main.add(Box.createVerticalStrut(10));
+            main.add(button);
+        }
+
+        outputArea = new JTextArea(8, 40);
+        outputArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(outputArea);
+        main.add(Box.createVerticalStrut(15));
+        main.add(scroll);
+
+        mainPanel.add(main, "Main");
+    }
+
+    private void loginUser() {
+        String id = userIdField.getText().trim();
+        String pass = new String(passwordField.getPassword()).trim();
+
+        try {
+            Message msg = new Message(Header.ACCT, Header.LOGIN, id + "," + pass,
+                    "client", "login", "server", "client");
+            outSocket.writeObject(msg);
+            Message response = (Message) inSocket.readObject();
+
+            if (response.getPrimaryHeader() == Header.NET &&
+                response.getSecondaryHeader() == Header.ACK &&
+                response.getData() instanceof Member) {
+                loggedInMember = (Member) response.getData();
+                statusLabel.setText("Welcome, " + loggedInMember.getName());
+                cardLayout.show(mainPanel, "Main");
             } else {
-                log("Login failed: " + response.getText()); // didn’t go through
-                showErrorAndExit("Login failed. Client will exit"); // end session immediately
+                statusLabel.setText("Login failed: " + response.getData());
             }
-        } catch (IOException | ClassNotFoundException e) {
-            showErrorAndExit("Login error: " + e.getMessage()); // something broke during login
+        } catch (Exception e) {
+            showError("Login error: " + e.getMessage());
         }
     }
 
-    private void promptAndSend(String prompt, CommandEnum command) {
-        String input = JOptionPane.showInputDialog(frame, prompt); // ask the user for input
-        if (input != null && !input.trim().isEmpty()) { // make sure they actually typed something
-            HeaderEnum header = HeaderEnum.member;
-            if (command == CommandEnum.logout || command == CommandEnum.login) {
-                header = HeaderEnum.login; // certain commands need the login header instead
-            }
-            sendAndReceive(new Message(header, command, StatusEnum.toServer, input.trim())); // wrap it in a Message and go
-        }
-    }
+    private void signupUser() {
+        String name = JOptionPane.showInputDialog(this, "Enter your name:");
+        if (name == null || name.isBlank()) return;
 
-    private void logout() {
-        sendAndReceive(new Message(HeaderEnum.login, CommandEnum.logout, StatusEnum.toServer, "logout request")); // tell server we’re logging out
-        isConnected = false; // no longer connected
-        frame.dispose(); // close window
-        System.exit(0); // full exit
-    }
-
-    private void sendAndReceive(Message message) {
-        if (!isConnected) {
-            log("Not connected to server"); // we can’t do anything if there’s no connection
-            return;
-        }
         try {
-            sendMessage(message); // send to server
-            Message response = (Message) inSocket.readObject(); // get reply
-            log("Server: " + response.getText()); // print response
-        } catch (IOException | ClassNotFoundException e) {
-            log("Communication error: " + e.getMessage()); // connection went bad
+            Message msg = new Message(Header.ACCT, Header.CREATE, name,
+                    "client", "create", "server", "client");
+            outSocket.writeObject(msg);
+            Message response = (Message) inSocket.readObject();
+
+            if (response.getPrimaryHeader() == Header.NET &&
+                response.getSecondaryHeader() == Header.ACK) {
+                JOptionPane.showMessageDialog(this, "Account created. Your info:\n" + response.getData());
+            } else {
+                showError("Signup failed: " + response.getData());
+            }
+        } catch (Exception e) {
+            showError("Signup error: " + e.getMessage());
         }
     }
 
-    private void sendMessage(Message message) throws IOException {
-        outSocket.writeObject(message); // send object over the stream
-        outSocket.flush(); // make sure it’s actually sent
+    private void handleAction(String label) {
+        String prompt = switch (label) {
+            case "Add Member" -> "Enter new member's name:";
+            case "Search Member" -> "Enter member ID:";
+            case "Add Item" -> "Enter item as Title,Year,Author,Quantity:";
+            case "Search Item" -> "Enter item title:";
+            case "Add Location" -> "Enter location name:";
+            case "Search Location" -> "Enter location name:";
+            default -> "Enter data:";
+        };
+
+        String input = JOptionPane.showInputDialog(this, prompt);
+        if (input == null || input.isBlank()) return;
+
+        Header header = label.contains("Item") ? Header.INV : Header.ACCT;
+        Header sub = label.contains("Search") ? Header.GET : Header.CREATE;
+
+        try {
+            Message msg = new Message(header, sub, input, "client", "menu", "server", "client");
+            outSocket.writeObject(msg);
+            Message response = (Message) inSocket.readObject();
+            outputArea.append("➤ " + label + ": " + response.getData() + "\n");
+        } catch (Exception e) {
+            showError("Action failed: " + e.getMessage());
+        }
     }
 
-    private void log(String text) {
-        outputArea.append(text + "\n"); // this prints messages into the scrolling output area
+    private void showError(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    private void showErrorAndExit(String msg) {
-        JOptionPane.showMessageDialog(frame, msg, "Error", JOptionPane.ERROR_MESSAGE); // popup with message
-        System.exit(1); // shut down
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(ClientGUI::new);
     }
 }
