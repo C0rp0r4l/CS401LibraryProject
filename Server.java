@@ -151,11 +151,31 @@ class Server {
 
                 private Message handleInventoryActions(Message msg) {
                     Message response = null;
+                    Item item;
                     
                     switch(msg.getSecondaryHeader()) {
+                    
+                    case Header.CREATE:
+                    	String[] parts = ((String) msg.getData()).split(",");
+                    	System.out.println(parts.length);
+
+                    	String t = parts[0];           // Title
+                    	String y = parts[1]; // Year
+                    	String a = parts[2];           // Author
+                    	int q = Integer.parseInt(parts[3]); // Quantity (assuming 4)
+                    	itemList.addItem(t, y, a, q);
+				        response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		"New Item: " + t, 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
                     	
                     case Header.GET:
-                    	Item item = itemList.getItemFromTitle(msg.getData().toString());
+                    	item = itemList.getItemFromTitle(msg.getData().toString());
 				        response = new Message(
 				        		Header.INV, 
 				        		Header.DATA, 

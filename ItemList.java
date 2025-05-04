@@ -101,6 +101,23 @@ public class ItemList {
 		iArray[numItems] = temp;
 		numItems++;
 		modified = true;
+		save();
+	}
+	
+	//NEW FUNCTION ADDED BY JORDAN add item as item
+	public void addItem(Item item) {
+		System.out.println(item.toString());
+		
+		if(numItems == iArray.length) {
+			Item[] newArray = new Item[numItems *2];
+			for(int i = 0; i < (numItems*2); i++) {
+				newArray[i] = iArray[i];
+			}
+			iArray = newArray;
+		}
+		iArray[numItems] = item;
+		numItems++;
+		modified = true;
 	}
 	
 	// Get the type of list this is

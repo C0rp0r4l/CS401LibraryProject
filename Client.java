@@ -125,8 +125,9 @@ public class Client {
             }
 
         } catch (IOException | ClassNotFoundException e) {
-            isConnected = false; // we lost connection or had some issue
-            System.err.println("Error: " + e.getMessage());
+            isConnected = false;
+            System.err.println("Exception caught:");
+            e.printStackTrace(); // <-- This will show the real reason
         } finally {
             System.out.println("Client shutting down."); // always say goodbye
             System.exit(0); // peace out
