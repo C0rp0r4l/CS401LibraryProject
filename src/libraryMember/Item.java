@@ -1,100 +1,110 @@
-package libraryMember;
+package scmot;
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Random;
 
-public class Item {
-	static private int count = 0;
-	private String itemID;
-	private String title;
-	private String year;
-	private String author;
-	private String[] memberList;
-	private Integer numMember;
-	private Integer quantity;
-	
-	public Item(String t, String y, String a, Integer q) {
-		title = t;
-		year = y;
-		author = a;
-		quantity = q;
-		memberList = new String[100];
-		
-		// An issue with just using random is that it's posssible for two items to get the same ID
-		// by appending a count to it this assures even if the first X digits are the same the last two are always
-		// different
-		String temp = t.substring(0, 2) + y.substring(0,4) + a.substring(0,2);
-		Random rand = new Random();
-		int randomDigits = rand.nextInt(30000) + 10000;
-		itemID = temp + randomDigits + count;
-		count++;
-	}
-	
-	// Constructor ONLY for loading items into an item list
-	public Item(String i, String t, String y, String a, Integer q) {
-		title = t;
-		year = y;
-		author = a;
-		quantity = q;
-		memberList = new String[100];
-	}
-	
-	// Check if the number of owners is higher than the available quantity
-	// If it is return false, if not return true (indicating a succesful operation)
-	public Boolean addMember(String id) {
-		if(memberList.length >= quantity) {
-			return false;
-		}
-		else {
-			memberList[numMember] = id;
-			return true;
-		}
-	}
+public class Item implements Serializable {
+    static private int count = 0;
+    private String itemID;
+    private String title;
+    private String year;
+    private String author;
+    private String location = null;
+    private String ownedBy = null;
+    private ArrayList<String> reserved = new ArrayList<String>();
+    
+    public Item(String t, String y, String a) {
+        title = t;
+        year = y;
+        author = a;
+        
+        String temp = t.substring(0, 2) + y.substring(0,4) + a.substring(0,2);
+        Random rand = new Random();
+        int randomDigits = rand.nextInt(30000) + 10000;
+        itemID = temp + randomDigits + count;
+        count++;
+    }
+    
+    public Item(String i, String t, String y, String a, String loc, String own) {
+    	itemID = i;
+        title = t;
+        year = y;
+        author = a;
+        location = (loc == "null" ? null : loc);
+        ownedBy = (own == "null" ? null : own);
+    }
+    
+    public void handleReservation(String id) {
+    	if(reserved.contains(id)) {
+    		reserved.remove(id);
+    	}
+    	else {
+    		reserved.add(id);
+    	}
+    }
+    
+    public boolean hasReservations() {
+    	return reserved.size() > 0;
+    }
+    
+    public ArrayList<String> getReservations() {
+    	return reserved;
+    }
+    
+    public boolean isCheckedOut() {
+    	return (ownedBy != null && !("null".equals(ownedBy)));
+    }
+    
+    public void setOwner(String id) {
+        ownedBy = id;
+    }
 
-	public Boolean removeMember(String id){
-		for(int i = 0; i < numMember; i++) {
-			if(memberList[i].compareTo(id) == 0){
-				memberList[i] = memberList[numMember];
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	public Boolean isMemberHere(String id) {
-		for(int i = 0; i < numMember; i++) { 
-			if(memberList[i].compareTo(id) == 0) {
-				return true;
-			}
-		}
-		return false;
-	}
+    public void removeOwner() {
+    	ownedBy = null;
+    }
+    
+    public String getOwner() {
+    	return ownedBy;
+    }
+    
+    public Boolean isOwner(String id) {
+        return ownedBy == id;
+    }
+    
+    public void setLoc(String id) {
+        location = id;
+    }
 
-	// Print out the attributes seperated by comma and the number of owners + list of members
-	// number of owners is important because we need to somehow know the number of strings to parse
-	// while saving or loading.
-	public String toString() {
-		String temp = itemID + "," + title + "," + year + "," + author + "," + quantity + "," + numMember;
-		for(int i = 0; i < memberList.length; i++) {
-			String list = "," + memberList[i];
-			temp.concat(list);
-		}
-		return temp;
-	}
-	
-	public String getID() {
-		return itemID;
-	}
-	
-	public String getTitle() {
-		return title;
-	}
-	
-	public String getYear() {
-		return year;
-	}
-	
-	public String getAuthor() {
-		return author;
-	}
-	
+    public void removeLoc() {
+    	location = null;
+    }
+    
+    public String getLoc() {
+    	return location;
+    }
+    
+    public Boolean isAt(String id) {
+        return location == id;
+    }
+
+    public String toString() {
+        return itemID + "," + title + "," + year + "," + author + "," + location + "," + ownedBy; //need to write reserved list too
+    }
+    
+    public String getID() {
+        return itemID;
+    }
+    
+    public String getTitle() {
+        return title;
+    }
+    
+    public String getYear() {
+        return year;
+    }
+    
+    public String getAuthor() {
+        return author;
+    }
 }
