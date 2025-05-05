@@ -1,9 +1,8 @@
 package libraryMember;
 
 import java.util.Random;
-import java.io.Serializable;
 
-public class Member implements Serializable {
+public class Member {
 	//variables
 	static private int count = 0;
 	private String userID;
@@ -11,7 +10,16 @@ public class Member implements Serializable {
 	boolean accountHold;
 	private String name;
 	private int strikes;
+	private boolean banned;
 
+	
+	public Member() {
+	    this.name = "";
+	    this.userID = "";
+	    this.accountHold = false;
+	    this.strikes = 0;
+	    this.banned = false;
+	}
 	
 	//methods
 	//constructor
@@ -33,6 +41,10 @@ public class Member implements Serializable {
 		//REMEMBER THE MAIN WAY TO FIND A MEMBER IS WITH THE USERID
 	}
 	
+	public void setName(String newName) {
+	    this.name = newName;
+	}
+	
 	// Constructor ONLY for loading already existing members from a file since ID is randomly generated
 	// name, userID, strikes, accountHold
 	public Member(String n, String uID, String s, String a) {
@@ -40,6 +52,15 @@ public class Member implements Serializable {
 		userID = uID;
 		strikes = Integer.valueOf(s);
 		accountHold = Boolean.valueOf(a);
+	}
+	
+	//NEW FUNCTION BY JORDAN
+	public boolean addStrike() {
+		strikes++;
+		if(strikes == 3) {
+			banned = true;
+		}
+		return banned;
 	}
 	
 	// get userID
@@ -63,8 +84,8 @@ public class Member implements Serializable {
 	}
 	
 	// Returns true/false of the account hold as a string
-	public String getAccountHold() {		
-		return String.valueOf(accountHold);
+	public Boolean getAccountHold() {		
+		return accountHold;
 	}
 	
 	//set account hold status

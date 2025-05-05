@@ -1,116 +1,118 @@
 package libraryMember;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class Item implements Serializable {
-    private static int count = 0;
+    static private int count = 0;
     private String itemID;
     private String title;
     private String year;
     private String author;
-    private String[] memberList;
-    private int numMember;
-    private int quantity;
-
-    // Constructor for new items
-    public Item(String t, String y, String a, int q) {
-        this.title = t;
-        this.year = y;
-        this.author = a;
-        this.quantity = q;
-        this.memberList = new String[100];
-        this.numMember = 0;
-
-        String temp = t.substring(0, Math.min(2, t.length())) +
-                      y.substring(0, Math.min(4, y.length())) +
-                      a.substring(0, Math.min(2, a.length()));
-
+    private String location = null;
+    private String ownedBy = null;
+    private ArrayList<String> reserved = new ArrayList<String>();
+    private ArrayList<String> reservations = new ArrayList<>();
+    
+    public Item(String t, String y, String a) {
+        title = t;
+        year = y;
+        author = a;
+        
+        String temp = t.substring(0, 2) + y.substring(0,4) + a.substring(0,2);
         Random rand = new Random();
         int randomDigits = rand.nextInt(30000) + 10000;
-        this.itemID = temp + randomDigits + count;
+        itemID = temp + randomDigits + count;
         count++;
     }
-
-    // Constructor for loading from file (no ID generation)
-    public Item(String i, String t, String y, String a, int q) {
-        this.itemID = i;
-        this.title = t;
-        this.year = y;
-        this.author = a;
-        this.quantity = q;
-        this.memberList = new String[100];
-        this.numMember = 0;
+    
+    public Item(String i, String t, String y, String a, String loc, String own) {
+    	itemID = i;
+        title = t;
+        year = y;
+        author = a;
+        location = (loc == "null" ? null : loc);
+        ownedBy = (own == "null" ? null : own);
     }
-
-    // Add a member ID if space available
-    public boolean addMember(String id) {
-        if (numMember >= quantity) return false;
-
-        memberList[numMember++] = id;
-        return true;
+    
+    public void handleReservation(String id) {
+    	if(reserved.contains(id)) {
+    		reserved.remove(id);
+    	}
+    	else {
+    		reserved.add(id);
+    	}
     }
-
-    // Remove a member ID from list
-    public boolean removeMember(String id) {
-        for (int i = 0; i < numMember; i++) {
-            if (memberList[i].equals(id)) {
-                memberList[i] = memberList[numMember - 1]; // replace with last
-                memberList[numMember - 1] = null;
-                numMember--;
-                return true;
-            }
-        }
-        return false;
+    
+    public boolean hasReservations() {
+    	return reserved.size() > 0;
     }
-
-    // Check if a member has this item
-    public boolean isMemberHere(String id) {
-        for (int i = 0; i < numMember; i++) {
-            if (memberList[i].equals(id)) return true;
-        }
-        return false;
+    
+    public ArrayList<String> getReservations() {
+    	return reserved;
     }
-
-    // ✅ Define isCheckedOut: if any members currently hold it
+    
     public boolean isCheckedOut() {
-        return numMember > 0;
+    	return (ownedBy != null && ownedBy != "null");
+    }
+    
+    public void setOwner(String id) {
+        ownedBy = id;
     }
 
-    // ✅ To string for saving
-    @Override
+    public void removeOwner() {
+    	ownedBy = null;
+    }
+    
+    public String getOwner() {
+    	return ownedBy;
+    }
+    
+    public Boolean isOwner(String id) {
+        return ownedBy == id;
+    }
+    
+    public void setLoc(String id) {
+        location = id;
+    }
+
+    public void removeLoc() {
+    	location = null;
+    }
+    
+    public String getLoc() {
+    	return location;
+    }
+    
+    public Boolean isAt(String id) {
+        return location == id;
+    }
+
     public String toString() {
-        StringBuilder temp = new StringBuilder(
-            itemID + "," + title + "," + year + "," + author + "," + quantity + "," + numMember
-        );
-        for (int i = 0; i < numMember; i++) {
-            temp.append(",").append(memberList[i]);
-        }
-        return temp.toString();
+        return itemID + "," + title + "," + year + "," + author + "," + location + "," + ownedBy; //need to write reserved list too
     }
-
-    // ✅ Getters
+    
     public String getID() {
         return itemID;
     }
-
+    
     public String getTitle() {
         return title;
     }
-
+    
     public String getYear() {
         return year;
     }
-
+    
     public String getAuthor() {
         return author;
     }
-
-    public int getQuantity() {
-        return quantity;
+    
+    public void removeReservation(String memberId) {
+        if (reservations != null) {
+            reservations.remove(memberId);
+        }
     }
 
-    public int getNumCheckedOut() {
-        return numMember;
-    }
 }

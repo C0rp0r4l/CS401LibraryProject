@@ -1,5 +1,6 @@
 package libraryMember;
 
+
 import java.io.*;
 import java.net.*;
 
@@ -7,8 +8,9 @@ import java.net.*;
 class Server {
 	
     private static MemberList memberList = new MemberList();
-    private static ItemList rentalList = new ItemList(itemListType.Rental);
-    private static ItemList reservationList = new ItemList(itemListType.Reservation);
+    private static ItemList itemList = new ItemList(itemListType.Library, "");
+    private static StaffMemberList staffList = new StaffMemberList("");
+    private static LocationList locationList = new LocationList();
     
     public static void main(String[] args) {
         ServerSocket server = null;
@@ -18,7 +20,12 @@ class Server {
             server = new ServerSocket(7777);
             server.setReuseAddress(true);
             
+            locationList.load();
             memberList.loadList();
+            
+            itemList.load();
+            staffList.loadList();
+            System.out.println(staffList.toString());
 
             // Running infinite loop for getting client requests
             while (true) {
@@ -148,9 +155,67 @@ class Server {
 
                 private Message handleInventoryActions(Message msg) {
                     Message response = null;
+                    Item item = null;
+                    
+                    switch(msg.getSecondaryHeader()) {
+                    
+                    case Header.CREATE:
+                    	String[] parts = ((String) msg.getData()).split(",");
+                    	System.out.println(parts.length);
 
-                    switch (msg.getSecondaryHeader()) {
-					
+                    	String t = parts[0];           // Title
+                    	String y = parts[1]; 		   // Year
+                    	String a = parts[2];           // Author
+                    	int q = Integer.parseInt(parts[3]); // Quantity (assuming 4)
+                    	for(int i = 0; i < q; i++) {
+                        	itemList.addItem(t, y, a);
+                    	}
+				        response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		q + " New " + t + " Item" + (q > 1 ? "s" : ""), 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.GET:
+                    	ItemList items = new ItemList(itemListType.Library, "");
+                    	String[] sec = ((String) msg.getData()).split(",");
+                    	String identifier = sec[0];           // Title
+                    	String info = sec[1]; 		   // Year
+                    	if(identifier.equals("title")) {
+                        	items = itemList.getItemsFromTitle(info);
+                    	}
+                    	else if(identifier.equals("id")){
+                        	items.addItem(itemList.getItemFromID(info));
+                    	}
+				        response = new Message(
+				        		Header.INV, 
+				        		Header.DATA, 
+				        		items, 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+				        break;
+				        
+                    case Header.TRANSFER:
+                    	sec = ((String) msg.getData()).split(",");
+                    	String id = sec[0];           // item id
+                    	String name = sec[1]; 		   // location name
+                    	item = (itemList.getItemFromID(id));
+                    	item.setLoc(name);
+				        response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		"Location of Item successfully changed", 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+				        break;
                     }
                     return response;
                 }
@@ -173,13 +238,7 @@ class Server {
 					    Member newMember = new Member(name);
 
 					    // Check if userID already exists (assuming userID is generated inside Member(name))
-					    boolean exists = false;
-					    for (int i = 0; i < memberList.getNumMembers(); i++) {
-					        if (memberList.getIndex(i).getUserID().equalsIgnoreCase(newMember.getUserID())) {
-					            exists = true;
-					            break;
-					        }
-					    }
+					    boolean exists = (memberList.searchMember(newMember.getUserID()) != null);
 
 					    if (exists) {
 					        System.out.println("Account already exists for userID: " + newMember.getUserID());
@@ -200,8 +259,16 @@ class Server {
                             break;
 
                         case Header.STATUS:
-                            // Handle Account status change by first finding account by id and then changing status to status
-                            response = new Message(Header.NET, Header.ACK, "Account Status Change", "server", "client", "client", "server");
+                            String memberId = msg.getData().toString();
+                            Member member = memberList.searchMember(memberId);
+
+                            if (member != null) {
+                                member.addStrike(); // make sure Member.java has this method
+                                memberList.setModified(true);
+                                response = new Message(Header.NET, Header.ACK, "Strike added to member " + memberId, "server", "client", "client", "server");
+                            } else {
+                                response = new Message(Header.NET, Header.ERR, "Member not found", "server", "client", "client", "server");
+                            }
                             break;
                             
                         case Header.LOGIN:
@@ -213,7 +280,7 @@ class Server {
                                 String pass = credentials[1];  // Second part after the comma
 
                                 // Attempt login
-                                Object goodCred = memberList.attemptLogin(user, pass);
+                                Object goodCred = staffList.attemptLogin(user, pass);
                                 
                                 if(goodCred == null) {
                                 	System.out.println("Wrong Password");
@@ -232,7 +299,7 @@ class Server {
 
                         	
                         case Header.EDIT:
-                            // Handle Account edit by overwriting current account with msg.getData() which should be a member
+                            memberList.editMember((Member) msg.getData());
                             response = new Message(Header.NET, Header.ACK, "Account Edited", "server", "client", "client", "server");
                             break;
 
@@ -251,13 +318,101 @@ class Server {
                 }
 
                 private Message handleLocationActions(Message msg) {
-                    // Handle Location-related actions here
-                    return new Message(Header.NET, Header.ACK, "Location action executed", "server", "client", "server", "client");
+                    Message response = null;
+                    Location loc;
+
+                	switch(msg.getSecondaryHeader()) {
+                	case Header.CREATE:
+                		locationList.addLocation((String) msg.getData());
+                        response = new Message(Header.NET, Header.ACK, "Location action executed", "server", "client", "server", "client");
+                        break;
+                	
+                	case Header.GET:
+                		loc = locationList.searchLocation((String) msg.getData());
+                        response = new Message(Header.LOC, Header.DATA, loc, "server", "client", "server", "client");
+                		break;
+                		
+                	case Header.ADD:
+                		String msgData = msg.getData().toString();  // Get the data from the message
+                        String[] request = msgData.split(",");  // Split the string at the comma
+
+                        if (request.length == 2) {
+                            String id = request[0];  // First part before the comma
+                            String location = request[1];  // Second part after the comma
+                            
+                    		loc = locationList.searchLocation(location);
+                    		
+                    		StaffMember staff = staffList.searchMember(id);
+                    		
+                    		loc.addStaffMember(staff);
+                    		
+                    		System.out.println("Staff Member successfully added");
+                    		response = new Message(Header.NET, Header.ACK, "Staff Member successfully added", "server", "client", "server", "client");
+                        }
+                	}
+                	
+                	return response;
                 }
 
                 private Message handleItemActions(Message msg) {
+                    Message response = null;
+
                     // Handle Item Attention-related actions here
-                    return new Message(Header.NET, Header.ACK, "Item action executed", "server", "client", "server", "client");
+                	String[] parts;
+
+                    switch (msg.getSecondaryHeader()) {
+                    case Header.CHECKIN:
+                    	parts = msg.getData().toString().split(",");
+                    	itemList.removeOwner(parts[0]);
+                    	System.out.println(parts[1] + " checked in " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " checked in " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.CHECKOUT:
+                    	parts = msg.getData().toString().split(",");
+                    	itemList.addOwner(parts[1], parts[0]);
+                    	System.out.println(parts[1] + " checked out " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " checked out " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.RESERVE:
+                    	parts = msg.getData().toString().split(",");
+                    	itemList.handleReservation(parts[0], parts[1]);
+                    	System.out.println(parts[1] + " reserved " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " reserved " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.REMOVE:
+                        parts = msg.getData().toString().split(",");
+                        String itemId = parts[0];
+                        String memberId = parts[1];
+                        itemList.removeReservation(itemId, memberId); // you must implement this in ItemList
+                        System.out.println("Reservation removed for " + memberId + " on item " + itemId);
+                        response = new Message(Header.NET, Header.ACK, "Reservation removed from item " + itemId, "server", "client", "client", "server");
+                        break;
+                    }
+                    return response;
                 }
 
                 private Message handleNetworkActions(Message msg) {
