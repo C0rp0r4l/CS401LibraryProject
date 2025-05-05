@@ -6,7 +6,7 @@ import java.util.Scanner;
 public class MemberList {
 	private Integer numMembers;
 	private Member[] mArray;
-	private String sourceName = "memberList";
+	private String sourceName = "memberList.txt";
 	private boolean modified = false;
 	
 	

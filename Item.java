@@ -1,6 +1,7 @@
 package scmot;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class Item implements Serializable {
@@ -9,16 +10,14 @@ public class Item implements Serializable {
     private String title;
     private String year;
     private String author;
-    private String[] memberList;
-    private Integer numMember;
-    private Integer quantity;
+    private String location = null;
+    private String ownedBy = null;
+    private ArrayList<String> reserved = new ArrayList<String>();
     
-    public Item(String t, String y, String a, Integer q) {
+    public Item(String t, String y, String a) {
         title = t;
         year = y;
         author = a;
-        quantity = q;
-        memberList = new String[100];
         
         String temp = t.substring(0, 2) + y.substring(0,4) + a.substring(0,2);
         Random rand = new Random();
@@ -27,57 +26,70 @@ public class Item implements Serializable {
         count++;
     }
     
-    public Item(String i, String t, String y, String a, Integer q) {
+    public Item(String i, String t, String y, String a, String loc, String own) {
+    	itemID = i;
         title = t;
         year = y;
         author = a;
-        quantity = q;
-        memberList = new String[100];
+        location = (loc == "null" ? null : loc);
+        ownedBy = (own == "null" ? null : own);
+    }
+    
+    public void handleReservation(String id) {
+    	if(reserved.contains(id)) {
+    		reserved.remove(id);
+    	}
+    	else {
+    		reserved.add(id);
+    	}
+    }
+    
+    public boolean hasReservations() {
+    	return reserved.size() > 0;
+    }
+    
+    public ArrayList<String> getReservations() {
+    	return reserved;
     }
     
     public boolean isCheckedOut() {
-    	if(numMember >= quantity) {
-    		return true;
-    	}
-    	return false;
+    	return (ownedBy != null && ownedBy != "null");
     }
     
-    public Boolean addMember(String id) {
-        if(memberList.length >= quantity) {
-            return false;
-        }
-        else {
-            memberList[numMember] = id;
-            return true;
-        }
+    public void setOwner(String id) {
+        ownedBy = id;
     }
 
-    public Boolean removeMember(String id){
-        for(int i = 0; i < numMember; i++) {
-            if(memberList[i].compareTo(id) == 0){
-                memberList[i] = memberList[numMember];
-                return true;
-            }
-        }
-        return false;
+    public void removeOwner() {
+    	ownedBy = null;
     }
     
-    public Boolean isMemberHere(String id) {
-        for(int i = 0; i < numMember; i++) { 
-            if(memberList[i].compareTo(id) == 0) {
-                return true;
-            }
-        }
-        return false;
+    public String getOwner() {
+    	return ownedBy;
+    }
+    
+    public Boolean isOwner(String id) {
+        return ownedBy == id;
+    }
+    
+    public void setLoc(String id) {
+        location = id;
+    }
+
+    public void removeLoc() {
+    	location = null;
+    }
+    
+    public String getLoc() {
+    	return location;
+    }
+    
+    public Boolean isAt(String id) {
+        return location == id;
     }
 
     public String toString() {
-        String temp = itemID + "," + title + "," + year + "," + author + "," + quantity + "," + numMember;
-        for(int i = 0; i < memberList.length; i++) {
-            String list = "," + memberList[i];
-            temp.concat(list);
-        }
-        return temp;
+        return itemID + "," + title + "," + year + "," + author + "," + location + "," + ownedBy; //need to write reserved list too
     }
     
     public String getID() {

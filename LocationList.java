@@ -8,7 +8,7 @@ import java.util.Scanner;
 
 public class LocationList {
     private ArrayList<Location> locations;
-    private String sourceName = "locationlist.txt";
+    private String sourceName = "locationList.txt";
     private boolean modified = false;
     
     public LocationList() {
@@ -54,6 +54,41 @@ public class LocationList {
     public void addLocation(String name) {
         locations.add(new Location(name));
         modified = true;
+        save();
+    }
+    
+    public ItemList loadItems() {
+        ItemList allItems = new ItemList(itemListType.Library, "");
+
+        for (Location loc : locations) {
+            ItemList inventory = loc.getInventory(); // returns Item[]
+            if (inventory != null) {
+                for (Item item : inventory.getIArray()) {
+                    if (item != null) {
+                        allItems.addItem(item);
+                    }
+                }
+            }
+        }
+
+        return allItems;
+    }
+    
+    public StaffMemberList loadStaff() {
+    	StaffMemberList allStaff = new StaffMemberList("");
+
+        for (Location loc : locations) {
+        	StaffMemberList staff = loc.getStaffMembers(); // returns Item[]
+            if (staff != null) {
+                for (StaffMember s : staff.getMArray()) {
+                    if (s != null) {
+                        allStaff.addMember(s);
+                    }
+                }
+            }
+        }
+
+        return allStaff;
     }
     
     public void save() {
@@ -63,7 +98,7 @@ public class LocationList {
 
         try (FileWriter writer = new FileWriter(sourceName)) {
             for (Location location : locations) {
-                writer.write(location.getLocationName() + "\n");
+                writer.write(location.toString() + "\n");
             }
             modified = false;
         } catch (Exception e) {
@@ -78,16 +113,26 @@ public class LocationList {
                 return;
             }
 
-            try (Scanner scanner = new Scanner(file)) {
-                locations.clear(); // Clear existing locations before loading
-                while (scanner.hasNextLine()) {
-                    String name = scanner.nextLine().trim();
-                    if (!name.isEmpty()) {
-                        addLocation(name);
-                    }
-                }
-            }
-            modified = false;
+            Scanner scanner = new Scanner(file);
+			scanner.useDelimiter(",|\n");
+			
+
+	    	//file format
+			//locationName + "," + rentalItemList.sourcename() + ","
+	    	//+ reserveItemList.sourcename() + "," + locationInventory.sourcename()
+	    	//+ "," + locationStaff.sourcename();
+			while(scanner.hasNext()) {
+				String name = scanner.next();
+				String rentalList = scanner.next();
+				String reserveList = scanner.next();
+				String locationList = scanner.next();
+				String staffList = scanner.next();
+				Location temp = new Location(name, rentalList, reserveList, locationList, staffList);
+				
+				locations.add(temp);
+			}
+			scanner.close();
+			modified = false;
         } catch (Exception e) {
             System.out.println("Error loading location list: " + e.getMessage());
         }

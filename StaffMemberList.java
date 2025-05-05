@@ -7,17 +7,21 @@ import java.util.Scanner;
 public class StaffMemberList {
     private Integer numMembers;
 	private StaffMember[] mArray;
-	private String sourceName = "memberList";
+	private String sourceName = null;
 	private boolean modified = false;
 	
-	
-	public StaffMemberList() {
+	public StaffMemberList(String name) {
+		sourceName = name + "StaffMemberList.txt";
 		numMembers = 0;
 		mArray = new StaffMember[200];
 	}
 	
 	public void setFilename(String filename) {
 		sourceName = filename;
+	}
+	
+	public String sourcename() {
+		return sourceName;
 	}
 	
 	public String toString() {
@@ -73,6 +77,10 @@ public class StaffMemberList {
 		return null;
 	}
 	
+	public StaffMember[] getMArray() {
+		return mArray;
+	}
+	
 	public void removeMember(String id) {
 		
 		for(int i = 0; i < numMembers; i++) {
@@ -95,6 +103,20 @@ public class StaffMemberList {
 		
 		StaffMember temp = new StaffMember(name);
 		mArray[numMembers] = temp;
+	}
+	
+	//NEW FUNCTION FROM JORDAN ADD STAFF MEMBER BY MEMBER
+	public void addMember(StaffMember m) {
+		
+		if(mArray.length == numMembers) {
+			StaffMember[] temp = new StaffMember[numMembers*2];
+			for(int i = 0; i < numMembers; i++) {
+				temp[i] = mArray[i];
+			}
+			mArray = temp;
+		}
+		
+		mArray[numMembers] = m;
 	}
 	
 	public Object attemptLogin(String u, String p) {
@@ -155,9 +177,10 @@ public class StaffMemberList {
 			while(scanner.hasNext()) {
 				String name = scanner.next();
 				String userID = scanner.next();
+				String password = scanner.next();
 				String strikes = scanner.next();
 				String accountHold = scanner.next();
-				Member temp = new Member(name, userID, strikes, accountHold);
+				Member temp = new StaffMember(name, userID, password, strikes, accountHold);
 				
 				mArray[numMembers] = (StaffMember) temp;
 				numMembers++;
@@ -167,6 +190,7 @@ public class StaffMemberList {
 		}
 		catch (Exception e) {
 			System.out.println("Error reading file");
+			e.printStackTrace();
 		}
 	}
 }

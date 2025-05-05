@@ -68,12 +68,36 @@ public class Client {
                         }
 
                         case 3: {//add location
-                            System.out.print("Not Yet Implemented");
+                            System.out.print("Enter location name: "); // ask for a new member’s name
+                            String name = scanner.nextLine();
+                            Message createMsg = new Message(
+                            		Header.LOC, 
+                            		Header.CREATE, 
+                            		name,
+                            		"client",
+                            		"server",
+                            		"server",
+                            		"client");
+                            outSocket.writeObject(createMsg); // send it off
+                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
+                            processMessage(inboundMessage, outSocket, inSocket, scanner);
                             break;
                         }
 
                         case 4: {//search a specific location
-                            System.out.print("Not Yet Implemented");
+                            System.out.print("Enter location name to search: "); // ask who to search
+                            String name = scanner.nextLine();
+                            Message searchMsg = new Message(
+                            		Header.LOC, 
+                            		Header.GET, 
+                            		name,
+                            		"client",
+                            		"server",
+                            		"server",
+                            		"client");
+                            outSocket.writeObject(searchMsg);
+                            inboundMessage = (Message) inSocket.readObject();
+                            processMessage(inboundMessage, outSocket, inSocket, scanner);
                             break;
                         }
 
@@ -101,20 +125,46 @@ public class Client {
                         }
 
                         case 6: {//search a specific item
-                        	System.out.print("Title of item? : "); // ask for a new item's name
-                            String title = scanner.nextLine();
-                            Message searchMsg = new Message(
-                            		Header.INV, 
-                            		Header.GET, 
-                            		title,
-                            		"client",
-                            		"server",
-                            		"server",
-                            		"client");
-                            outSocket.writeObject(searchMsg); // send it off
-                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
-                            processMessage(inboundMessage, outSocket, inSocket, scanner);
-                            break;
+                        	System.out.println("Search by title or ID? : "); // ask for a new item's name
+                        	System.out.println("1. Title");
+                        	System.out.println("2. ID");
+                        	
+                        	int choice1 = getValidChoice(scanner, 2);
+
+                	        switch(choice1) {
+                	        case 1:
+                	        	System.out.println("Title: ");
+                	        	String title = scanner.nextLine();
+                                Message titleMsg = new Message(
+                                		Header.INV, 
+                                		Header.GET, 
+                                		"title," + title,
+                                		"client",
+                                		"server",
+                                		"server",
+                                		"client");
+                                outSocket.writeObject(titleMsg); // send it off
+                                inboundMessage = (Message) inSocket.readObject(); // wait for reply
+                                processMessage(inboundMessage, outSocket, inSocket, scanner);
+                                break;
+                	        case 2:
+                	        	System.out.println("ID: ");
+                	        	String id = scanner.nextLine();
+                                Message idMsg = new Message(
+                                		Header.INV, 
+                                		Header.GET, 
+                                		"id," + id,
+                                		"client",
+                                		"server",
+                                		"server",
+                                		"client");
+                                outSocket.writeObject(idMsg); // send it off
+                                inboundMessage = (Message) inSocket.readObject(); // wait for reply
+                                processMessage(inboundMessage, outSocket, inSocket, scanner);
+                                break;
+                	        }
+                	        break;
+                            
                         }
 
                         default: {
@@ -247,6 +297,47 @@ public class Client {
                 }
                 break;
                 
+            case Header.LOC:
+            	switch(msg.getSecondaryHeader()) {
+            	case Header.DATA:
+            		if(msg.getData() == null) {
+            			System.out.println("The Location you're looking for doesn't exist");
+            		}
+            		else if (msg.getData() instanceof Location) {
+            			Location loc = (Location) msg.getData();
+            			System.out.println(loc.toString());
+            			System.out.println("What would you like to do with this Location?");
+            	        System.out.println("1. Add Staff");
+            	        System.out.println("2. Remove Staff");
+            	        System.out.println("3. Delete Location");
+            	        int choice = getValidChoice(scanner, 1);
+
+            	        switch(choice) {
+            	        case 1:
+            	        	System.out.println("ID of Staff Member to add: ");
+            	        	String memberID = scanner.nextLine();
+                                Message staffMsg = new Message(
+                                		Header.LOC, 
+                                		Header.ADD, 
+                                		memberID + "," + loc.getLocationName(),
+                                		"client",
+                                		"server",
+                                		"server",
+                                		"client");
+                                try {
+    								out.writeObject(staffMsg);
+    							} catch (IOException e) {
+    								e.printStackTrace();
+    							}
+            	        	break;
+            	        default:
+            	        	System.out.println("Please choose a valid menu option.");
+            	        	break;
+            	        }
+            		}
+                	break;
+            	}
+                
             case Header.INV:
             	//Handle inventory-related messages
             	switch(msg.getSecondaryHeader()) {
@@ -254,9 +345,20 @@ public class Client {
             		if(msg.getData() == null) {
             			System.out.println("No inventory with that title");
             		}
-            		else if (msg.getData() instanceof Item) {
-            			Item item = (Item) msg.getData();
+            		else if (msg.getData() instanceof ItemList) {
+            			Item[] items = ((ItemList) msg.getData()).getIArray();
+            			System.out.println("Search Results: ");
+            			for(int i = 0; i < items.length; i++) {
+            				System.out.println((i + 1) + ". " + items[i].getID() + " - " + items[i].getTitle());
+            			}
+            			
+            			System.out.println("Choose an Item: ");
+            			int choice = getValidChoice(scanner, items.length);
+
+            	        Item item = items[choice - 1];
+            	        	
             			boolean checkedOut = item.isCheckedOut();
+            			System.out.println(item.toString());
             			System.out.println("What would you like to do with this item?");
             			if(checkedOut) {
             				System.out.println("1. Check in Item");
@@ -265,7 +367,9 @@ public class Client {
             				System.out.println("1. Check out Item");
             			}
             	        System.out.println("2. Reserve Item");
-            	        int choice = getValidChoice(scanner, 2);
+            	        System.out.println("3. Remove Reservation");
+            	        System.out.println("4. Change Location");
+            	        choice = getValidChoice(scanner, 4);
 
             	        String memberID = "";
             	        switch(choice) {
@@ -288,7 +392,7 @@ public class Client {
     							}
             	        	}
             	        	else {
-            	        		System.out.println("ID of Member to check Item out from: ");
+            	        		System.out.println("ID of Member to check Item out for: ");
             	        		memberID = scanner.nextLine();
                                 Message checkOutMsg = new Message(
                                 		Header.ITEM, 
@@ -307,7 +411,7 @@ public class Client {
             	        	}
             	        	break;
             	        case 2:
-            	        	System.out.println("ID of Member to check Item out to: ");
+            	        	System.out.println("ID of Member to reserve item for: ");
         	        		memberID = scanner.nextLine();
             	        	if(checkedOut) {
                                 Message reserveMsg = new Message(
@@ -325,6 +429,43 @@ public class Client {
     							}
             	        	}
             	        	break;
+            	        case 3:
+            	        	System.out.println("ID of Member to remove reservation from: ");
+        	        		memberID = scanner.nextLine();
+            	        	if(checkedOut) {
+                                Message reserveMsg = new Message(
+                                		Header.ITEM, 
+                                		Header.RESERVE, 
+                                		item.getID() + "," + memberID,
+                                		"client",
+                                		"server",
+                                		"server",
+                                		"client");
+                                try {
+    								out.writeObject(reserveMsg);
+    							} catch (IOException e) {
+    								e.printStackTrace();
+    							}
+            	        	}
+            	        	break;
+            	        case 4:
+            	        	System.out.println("Name of Location to add Item to: ");
+        	        		String name = scanner.nextLine();
+        	        		Message reserveMsg = new Message(
+                            		Header.INV, 
+                            		Header.TRANSFER, 
+                            		item.getID() + "," + name,
+                            		"client",
+                            		"server",
+                            		"server",
+                            		"client");
+                            try {
+								out.writeObject(reserveMsg);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+            	        break;
+
             	        default:
             	        	System.out.println("Please choose a valid menu option.");
             	        	break;
@@ -384,7 +525,7 @@ public class Client {
                 if (choice >= 1 && choice <= limit) {
                     break; // we got a good number
                 } else {
-                    System.out.println("Invalid option. Please choose between 1 and 6.");
+                    System.out.println("Invalid option. Please choose between 1 and " + limit + ".");
                 }
             } else {
                 System.out.println("Invalid input. Please enter a number.");

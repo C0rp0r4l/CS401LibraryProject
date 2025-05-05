@@ -13,6 +13,14 @@ public class Member {
 	private boolean banned;
 
 	
+	public Member() {
+	    this.name = "";
+	    this.userID = "";
+	    this.accountHold = false;
+	    this.strikes = 0;
+	    this.banned = false;
+	}
+	
 	//methods
 	//constructor
 	public Member(String name) {

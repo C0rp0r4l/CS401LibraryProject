@@ -7,16 +7,36 @@ import java.util.Scanner;
 
 public class Location {
     private String locationName;
-    private ItemList locationInventory;
-    private StaffMemberList locationStaff;
+    private static ItemList rentalItemList;
+    private static ItemList reserveItemList;
+    private static ItemList locationInventory;
+    private static StaffMemberList locationStaff;
     
     // Constructor for new location
     public Location(String name) {
         this.locationName = name;
-        this.locationInventory = new ItemList(itemListType.Library);
-        this.locationStaff = new StaffMemberList();
-        this.locationInventory.load();
-        this.locationStaff.loadList();
+        this.locationInventory = new ItemList(itemListType.Library, name);
+        this.reserveItemList = new ItemList(itemListType.Reservation, name);
+        this.rentalItemList = new ItemList(itemListType.Rental, name);
+        this.locationStaff = new StaffMemberList(name);
+
+        locationInventory.load();
+        reserveItemList.load();
+        rentalItemList.load();
+        locationStaff.loadList();
+    }
+    
+    public Location(String n, String locList, String resList, String rentList, String staffList) {
+        this.locationName = n;
+        this.locationInventory = new ItemList(locList, itemListType.Library);
+        this.reserveItemList = new ItemList(resList, itemListType.Reservation);
+        this.rentalItemList = new ItemList(rentList, itemListType.Rental);
+        this.locationStaff = new StaffMemberList(staffList);
+
+        locationInventory.load();
+        reserveItemList.load();
+        rentalItemList.load();
+        locationStaff.loadList();
     }
 
     // Getters
@@ -33,14 +53,14 @@ public class Location {
     }
     
     // Inventory Management Methods
-    public void addItem(String title, String year, String author, int quantity) {
-        locationInventory.addItem(title, year, author, quantity);
-        locationInventory.save();
+    public void addItem(String title, String year, String author) {
+    	locationInventory.addItem(title, year, author);
+    	locationInventory.save();
     }
     
     public void removeItem(String itemID) {
-        locationInventory.removeItem(itemID);
-        locationInventory.save();
+    	locationInventory.removeItem(itemID);
+    	locationInventory.save();
     }
     
     public boolean transferItem(String itemID, Location destination) {
@@ -53,7 +73,7 @@ public class Location {
         String author = locationInventory.getAuthor(itemID);
         int quantity = 1;
         
-        destination.addItem(title, year, author, quantity);
+        destination.addItem(title, year, author);
         locationInventory.removeItem(itemID);
         
         locationInventory.save();
@@ -65,6 +85,11 @@ public class Location {
     // Staff Management
     public void addStaffMember(String name) {
         locationStaff.addMember(name);
+        locationStaff.saveList();
+    }
+    
+    public void addStaffMember(StaffMember s) {
+        locationStaff.addMember(s);
         locationStaff.saveList();
     }
     
@@ -124,6 +149,10 @@ public class Location {
     public void sortByTitleThenAuthor() {
         sortItems(Comparator.comparing(Item::getTitle)
                   .thenComparing(Item::getAuthor));
+    }
+    
+    public String toString() {
+        return locationName + "," + rentalItemList.sourcename() + "," + reserveItemList.sourcename() + "," + locationInventory.sourcename() + "," + locationStaff.sourcename();
     }
     
     public String displaySortedInventory() {
