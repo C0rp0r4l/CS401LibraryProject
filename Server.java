@@ -10,6 +10,7 @@ class Server {
     private static ItemList rentalList = new ItemList(itemListType.Rental);
     private static ItemList reservationList = new ItemList(itemListType.Reservation);
     private static ItemList itemList = new ItemList(itemListType.Library);
+    private static StaffMemberList staffList = new StaffMemberList();
     
     public static void main(String[] args) {
         ServerSocket server = null;
@@ -208,13 +209,7 @@ class Server {
 					    Member newMember = new Member(name);
 
 					    // Check if userID already exists (assuming userID is generated inside Member(name))
-					    boolean exists = false;
-					    for (int i = 0; i < memberList.getNumMembers(); i++) {
-					        if (memberList.getIndex(i).getUserID().equalsIgnoreCase(newMember.getUserID())) {
-					            exists = true;
-					            break;
-					        }
-					    }
+					    boolean exists = (memberList.searchMember(newMember.getUserID()) != null);
 
 					    if (exists) {
 					        System.out.println("Account already exists for userID: " + newMember.getUserID());
@@ -248,7 +243,7 @@ class Server {
                                 String pass = credentials[1];  // Second part after the comma
 
                                 // Attempt login
-                                Object goodCred = memberList.attemptLogin(user, pass);
+                                Object goodCred = staffList.attemptLogin(user, pass);
                                 
                                 if(goodCred == null) {
                                 	System.out.println("Wrong Password");
@@ -267,7 +262,7 @@ class Server {
 
                         	
                         case Header.EDIT:
-                            // Handle Account edit by overwriting current account with msg.getData() which should be a member
+                            memberList.editMember((Member) msg.getData());
                             response = new Message(Header.NET, Header.ACK, "Account Edited", "server", "client", "client", "server");
                             break;
 

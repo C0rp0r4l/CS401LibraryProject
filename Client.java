@@ -101,7 +101,7 @@ public class Client {
                         }
 
                         case 6: {//search a specific item
-                        	System.out.print("Title of item? : "); // ask for a new member’s name
+                        	System.out.print("Title of item? : "); // ask for a new item's name
                             String title = scanner.nextLine();
                             Message searchMsg = new Message(
                             		Header.INV, 
@@ -141,9 +141,7 @@ public class Client {
                 switch (msg.getSecondaryHeader()) {
                     case Header.GET:
                     	while (member == null) {
-                        System.out.println("Would you like to... \n1. Log in\n2. Sign up");
-                        String continueChoice = scanner.nextLine().trim();
-                        if ("1".equalsIgnoreCase(continueChoice)) {
+                        System.out.println("Please Log in");
                         	System.out.println("Username: ");
                             String u = scanner.nextLine();
                             System.out.println("Password: ");
@@ -174,26 +172,6 @@ public class Client {
 								e.printStackTrace();
 							}
                         }
-                        else if ("2".equalsIgnoreCase(continueChoice)) {
-                        	System.out.println("Name: ");
-                        	String name = scanner.nextLine();
-                        	
-                            Message createMsg = new Message(
-                            		Header.ACCT, 
-                            		Header.CREATE, 
-                            		name,
-                            		"client",
-                            		"new user",
-                            		"server",
-                            		"client");
-
-                            try {
-								out.writeObject(createMsg);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-                        }
-                    	}
                     	break;
 
                     case Header.CREATE:
@@ -201,7 +179,66 @@ public class Client {
                         break;
                         
                     case Header.DATA:
-                    	System.out.println(msg.getData().toString());
+                    	if(msg.getData() == null) {
+                			System.out.println("The Member you're looking for doesn't exist");
+                		}
+                		else if (msg.getData() instanceof Member) {
+                			Member member = (Member) msg.getData();
+                			System.out.println(member.toString());
+                			System.out.println("What would you like to do with this Member?");
+                	        System.out.println("1. Add a Strike");
+                	        Boolean held = member.getAccountHold();
+                	        if(held) {
+                    	        System.out.println("2. Remove Hold");
+                	        }
+                	        else {
+                	        	System.out.println("2. Add Hold");
+                	        }
+                	        int choice = getValidChoice(scanner, 2);
+
+                	        switch(choice) {
+                	        case 1:
+                	        		member.addStrike();
+                                    Message editMsg = new Message(
+                                    		Header.ACCT, 
+                                    		Header.EDIT, 
+                                    		member,
+                                    		"client",
+                                    		"server",
+                                    		"server",
+                                    		"client");
+                                    try {
+        								out.writeObject(editMsg);
+        							} catch (IOException e) {
+        								e.printStackTrace();
+        							}
+                	        	break;
+                	        case 2:
+                	        	if(held) {
+                	        		member.setAccountHold("F");
+                	        	}
+                	        	else {
+                	        		member.setAccountHold("T");
+                	        	}
+                                Message holdMsg = new Message(
+                                		Header.ACCT, 
+                                		Header.EDIT, 
+                                		member,
+                                		"client",
+                                		"server",
+                                		"server",
+                                		"client");
+                                try {
+    								out.writeObject(holdMsg);
+    							} catch (IOException e) {
+    								e.printStackTrace();
+    							}
+                	        	break;
+                	        default:
+                	        	System.out.println("Please choose a valid menu option.");
+                	        	break;
+                	        }
+                		}
                     	break;
 
                     default:
