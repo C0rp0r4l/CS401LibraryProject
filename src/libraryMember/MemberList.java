@@ -44,21 +44,11 @@ public class MemberList {
 	}
 
 	public Member searchMember(String memberId) {
-	    int low = 0;
-	    int high = numMembers - 1;
-
-	    while (low <= high) {
-	        int mid = (low + high) / 2;
-	        int cmp = mArray[mid].getUserID().compareTo(memberId);
-
-	        if (cmp == 0) {
-	            return mArray[mid]; // Match found
-	        } else if (cmp < 0) {
-	            low = mid + 1; // Search right half
-	        } else {
-	            high = mid - 1; // Search left half
-	        }
-	    }
+		for(int i = 0; i < numMembers; i++) {
+			if(memberId.compareTo(mArray[i].getUserID()) == 0) {
+				return mArray[i];
+			}
+		}
 
 	    return null; // Not found
 	}

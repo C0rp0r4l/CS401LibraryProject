@@ -296,6 +296,10 @@ class Server {
 
                         case Header.GET:
                             // Handle Account data retrieval
+                        	if(memberList.searchMember(msg.getData().toString()) == null) {
+                        		response = new Message(Header.ACCT, Header.DATA, staffList.searchMember(msg.getData().toString()), "server", "client", "client", "server");
+                        		break;
+                        	}
                             response = new Message(Header.ACCT, Header.DATA, memberList.searchMember(msg.getData().toString()), "server", "client", "client", "server");
                             break;
 
