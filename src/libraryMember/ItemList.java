@@ -10,18 +10,18 @@ public class ItemList {
     private itemListType type;
     private boolean modified = false;
     
-    public ItemList(itemListType t) {
+    public ItemList(itemListType t, String name) {
         numItems = 0;
         iArray = new Item[1000];
         type = t;
         if(type == itemListType.Rental) {
-            sourceName = "itemRentalList";
+            sourceName = name + "itemRentalList";
         }
         else if(type == itemListType.Reservation) {
-            sourceName = "itemReservationList";
+            sourceName = name + "itemReservationList";
         }
         else if(type == itemListType.Library) {
-            sourceName = "itemsInLibrary";
+            sourceName = name + "itemsInLibrary";
         }
     }
 

@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class StaffMemberList {
     private Integer numMembers;
 	private StaffMember[] mArray;
-	private String sourceName = "memberList";
+	private String sourceName = "staffMemberList";
 	private boolean modified = false;
 	
 	
@@ -17,7 +17,7 @@ public class StaffMemberList {
 	}
 	
 	public void setFilename(String filename) {
-		sourceName = filename;
+		sourceName = sourceName.concat(filename);
 	}
 	
 	public String toString() {

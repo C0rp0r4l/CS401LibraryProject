@@ -8,15 +8,24 @@ import java.util.Scanner;
 public class Location {
     private String locationName;
     private ItemList locationInventory;
+    private ItemList reserveItemList;
+    private ItemList rentalItemList;
     private StaffMemberList locationStaff;
     
     // Constructor for new location
     public Location(String name) {
         this.locationName = name;
-        this.locationInventory = new ItemList(itemListType.Library);
+        this.locationInventory = new ItemList(itemListType.Library, name);
+        this.reserveItemList = new ItemList(itemListType.Reservation, name);
+        this.rentalItemList = new ItemList(itemListType.Rental, name);
         this.locationStaff = new StaffMemberList();
-        this.locationInventory.load();
-        this.locationStaff.loadList();
+
+        locationStaff.setFilename(name);
+
+        locationInventory.load();
+        reserveItemList.load();
+        rentalItemList.load();
+        locationStaff.loadList();
     }
 
     // Getters

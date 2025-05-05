@@ -16,7 +16,7 @@ public class MemberList {
 	}
 	
 	public void setFilename(String filename) {
-		sourceName = filename;
+		sourceName = sourceName.concat(filename);
 	}
 	
 	public String toString() {
@@ -82,7 +82,8 @@ public class MemberList {
 		}
 	}
 	
-	public void addMember(String name) {
+	//returns userID
+	public String addMember(String name) {
 		
 		if(mArray.length == numMembers) {
 			Member[] temp = new Member[numMembers*2];
@@ -91,9 +92,11 @@ public class MemberList {
 			}
 			mArray = temp;
 		}
+
 		
 		Member temp = new Member(name);
 		mArray[numMembers] = temp;
+		return temp.getUserID();
 	}
 	
 	public void saveList() {
