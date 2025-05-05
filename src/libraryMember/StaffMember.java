@@ -1,7 +1,14 @@
 package libraryMember;
 
-public class StaffMember extends Member{
-    private String userPassword = "";
+import java.io.Serializable;
+
+public class StaffMember extends Member implements Serializable{
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String userPassword = "";
+    private String location = null;
     
     public StaffMember(String name) {
         super(name);
@@ -12,7 +19,7 @@ public class StaffMember extends Member{
             int index = (int) (Math.random() * chars.length());
             result += chars.charAt(index);
         }
-    userPassword = result;
+        userPassword = result;
     }
 
     public String toString() {
@@ -20,9 +27,17 @@ public class StaffMember extends Member{
     }
 
     // Constructor only for saving and loading
-    public StaffMember(String n, String uID, String s, String a, String pw) {
+    public StaffMember(String n, String uID, String pw, String s, String a) {
         super(n, uID, s, a);
         userPassword = pw;
+    }
+    
+    public String getPassword() {
+    	return userPassword;
+    }
+    
+    public String getLocation() {
+    	return location;
     }
 
     public boolean loginAttempt(String id, String pw) {

@@ -1,38 +1,40 @@
 package libraryMember;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
 
-public class ItemList {
-    private Integer numItems;
+public class ItemList implements Serializable{
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Integer numItems;
     private Item[] iArray;
     private String sourceName;
     private itemListType type;
     private boolean modified = false;
     
-    public ItemList(itemListType t) {
+    public ItemList(itemListType t, String name) {
         numItems = 0;
         iArray = new Item[1000];
         type = t;
         if(type == itemListType.Rental) {
-            sourceName = "itemRentalList";
+            sourceName = name + "ItemRentalList.txt";
         }
         else if(type == itemListType.Reservation) {
-            sourceName = "itemReservationList";
+            sourceName = name + "ItemReservationList.txt";
         }
         else if(type == itemListType.Library) {
-            sourceName = "itemsInLibrary";
+            sourceName = name + "ItemsInLibrary.txt";
         }
     }
-
-    public String listOfItemRentedByMember(String id) {
-        String list = "";
-        for(int i = 0; i < numItems; i++) {
-            if(iArray[i].isMemberHere(id) == true) {
-                list.concat(iArray[i].getID());
-            }
-        }
-        return list;
+    
+    public ItemList(String sourcename, itemListType t) {
+        numItems = 0;
+        iArray = new Item[1000];
+        type = t;
+        sourceName = sourcename;
     }
     
     public String toString() {
@@ -43,43 +45,111 @@ public class ItemList {
         }
         return list;
     }
+    
+    public String sourcename() {
+    	return sourceName;
+    }
 
-    public Boolean addMemberToItem(String memberID, String itemID) {
-        if(this.type == itemListType.Library) {
+    public Boolean addOwner(String memberID, String itemID) {
+        if (this.type == itemListType.Library) {
             return false;
-        }
-        else {
-            for(int i = 0; i < numItems; i++) {
-                if(iArray[i].getID().compareTo(itemID) == 0){
-                    Boolean success = iArray[i].addMember(memberID);
-                    if(success == false){
-                        return false;
-                    }
-                }
+        } else {
+            try {
+                Item item = getItemFromID(itemID);
+                item.setOwner(memberID);
+                save();
+                return true; // success
+            } catch (Exception e) {
+                return false; // something went wrong
             }
-            return true;
         }
     }
 
-    public Boolean removeMemberFromItem(String memberID, String itemID) {
-        if(this.type == itemListType.Library) {
+    public Boolean removeOwner(String itemID) {
+        if (this.type == itemListType.Library) {
             return false;
-        }
-        else {
-            for(int i = 0; i < numItems; i++) {
-                if(iArray[i].getID().compareTo(itemID) == 0){
-                    Boolean success = iArray[i].removeMember(memberID);
-                    if(success == false) {
-                        return false;
-                    }
-                }
+        } else {
+            try {
+                Item item = getItemFromID(itemID);
+                item.removeOwner();
+                save();
+                return true; // success
+            } catch (Exception e) {
+                return false; // something went wrong
             }
-            return true;
         }
     }
     
-    public void addItem(String t, String y, String a, int q) {
-        Item temp = new Item(t, y, a, q);
+    public Boolean addLoc(String locID, String itemID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
+            try {
+                Item item = getItemFromID(itemID);
+                item.setLoc(locID);
+                save();
+                return true; // success
+            } catch (Exception e) {
+                return false; // something went wrong
+            }
+        }
+    }
+
+    public Boolean removeLoc(String itemID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
+            try {
+                Item item = getItemFromID(itemID);
+                item.removeLoc();
+                save();
+                return true; // success
+            } catch (Exception e) {
+                return false; // something went wrong
+            }
+        }
+    }
+    
+    public Boolean handleReservation(String itemID, String memberID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
+            try {
+                Item item = getItemFromID(itemID);
+                item.handleReservation(memberID);
+                save();
+                return true; // success
+            } catch (Exception e) {
+                return false; // something went wrong
+            }
+        }
+    }
+    
+	//NEW FUNCTION ADDED BY JORDAN
+	public ItemList getItemsFromTitle(String title) {
+		ItemList items = new ItemList(itemListType.Library, "");
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].getTitle().compareTo(title) == 0) {
+				items.addItem(iArray[i]);
+			}
+		}
+		if(items.getNumItems() > 0) {
+			return items;
+		}
+		else return null;
+	}
+	
+	public Item getItemFromID(String id) {
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].getTitle().compareTo(id) == 0) {
+				return iArray[i];
+			}
+		}
+		return null;
+	}
+    
+    public void addItem(String t, String y, String a) {
+        Item temp = new Item(t, y, a);
         
         if(numItems == iArray.length) {
             Item[] newArray = new Item[numItems *2];
@@ -89,6 +159,22 @@ public class ItemList {
             iArray = newArray;
         }
         iArray[numItems] = temp;
+        numItems++;
+        modified = true;
+        save();
+    }
+    
+    //NEW FUNCTION FROM JORDAN ADD ITEM BY ITEM
+    public void addItem(Item item) {
+        
+        if(numItems == iArray.length) {
+            Item[] newArray = new Item[numItems *2];
+            for(int i = 0; i < (numItems*2); i++) {
+                newArray[i] = iArray[i];
+            }
+            iArray = newArray;
+        }
+        iArray[numItems] = item;
         numItems++;
         modified = true;
     }
@@ -150,7 +236,7 @@ public class ItemList {
             FileWriter out = new FileWriter(sourceName);
             
             for(int i = 0; i < numItems; i++) {
-                out.write(iArray.toString() + "\n");
+                out.write(iArray[i].toString() + "\n");
             }
             
             out.close();
@@ -176,18 +262,16 @@ public class ItemList {
                 String title = scanner.next();
                 String year = scanner.next();
                 String author = scanner.next();
-                Integer quantity = Integer.valueOf(scanner.next());
-                Item temp = new Item(id, title, year, author, quantity);
+                String loc = scanner.next();
+                String own = scanner.next();
+                //need to parse reserved list
+                Item temp = new Item(id, title, year, author, loc, own);//change constructor once resereve list is added
                 
-                Integer numOwners = Integer.valueOf(scanner.next());
-                
-                for(int i = 0; i < numOwners; i++) {
-                    String scan = scanner.next();
-                    temp.addMember(scan);
-                }
-                scanner.close();
-                return true;
+                addItem(temp);
             }
+            
+            scanner.close();
+            return true;
         }
         catch (Exception e) {
             System.out.println("Error reading file");
