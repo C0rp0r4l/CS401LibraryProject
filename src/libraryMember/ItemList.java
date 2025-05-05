@@ -10,18 +10,18 @@ public class ItemList {
     private itemListType type;
     private boolean modified = false;
     
-    public ItemList(itemListType t, String name) {
+    public ItemList(itemListType t) {
         numItems = 0;
         iArray = new Item[1000];
         type = t;
         if(type == itemListType.Rental) {
-            sourceName = name + "itemRentalList";
+            sourceName = "itemRentalList";
         }
         else if(type == itemListType.Reservation) {
-            sourceName = name + "itemReservationList";
+            sourceName = "itemReservationList";
         }
         else if(type == itemListType.Library) {
-            sourceName = name + "itemsInLibrary";
+            sourceName = "itemsInLibrary";
         }
     }
 
@@ -77,6 +77,16 @@ public class ItemList {
             return true;
         }
     }
+    
+	//NEW FUNCTION ADDED BY JORDAN
+	public Item getItemFromTitle(String title) {
+		for(int i = 0; i < numItems; i++) {
+			if(iArray[i].getTitle().compareTo(title) == 0) {
+				return iArray[i];
+			}
+		}
+		return null;
+	}
     
     public void addItem(String t, String y, String a, int q) {
         Item temp = new Item(t, y, a, q);

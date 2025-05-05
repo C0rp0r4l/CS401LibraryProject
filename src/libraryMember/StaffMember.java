@@ -24,6 +24,10 @@ public class StaffMember extends Member{
         super(n, uID, s, a);
         userPassword = pw;
     }
+    
+    public String getPassword() {
+    	return userPassword;
+    }
 
     public boolean loginAttempt(String id, String pw) {
         if(userPassword.compareTo(pw) == 0 && id.compareTo(super.getUserID()) == 0) {

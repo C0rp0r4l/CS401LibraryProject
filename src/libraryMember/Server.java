@@ -7,10 +7,10 @@ import java.net.*;
 class Server {
 	
     private static MemberList memberList = new MemberList();
-    private static LocationList locationList = new LocationList();
-    
     private static ItemList rentalList = new ItemList(itemListType.Rental);
     private static ItemList reservationList = new ItemList(itemListType.Reservation);
+    private static ItemList itemList = new ItemList(itemListType.Library);
+    private static StaffMemberList staffList = new StaffMemberList();
     
     public static void main(String[] args) {
         ServerSocket server = null;
@@ -21,6 +21,8 @@ class Server {
             server.setReuseAddress(true);
             
             memberList.loadList();
+            Boolean itemsLoaded = itemList.load();
+            System.out.println("Items successfully loaded: " + itemsLoaded);
 
             // Running infinite loop for getting client requests
             while (true) {
@@ -150,9 +152,41 @@ class Server {
 
                 private Message handleInventoryActions(Message msg) {
                     Message response = null;
+                    Item item;
+                    
+                    switch(msg.getSecondaryHeader()) {
+                    
+                    case Header.CREATE:
+                    	String[] parts = ((String) msg.getData()).split(",");
+                    	System.out.println(parts.length);
 
-                    switch (msg.getSecondaryHeader()) {
-					
+                    	String t = parts[0];           // Title
+                    	String y = parts[1]; // Year
+                    	String a = parts[2];           // Author
+                    	int q = Integer.parseInt(parts[3]); // Quantity (assuming 4)
+                    	itemList.addItem(t, y, a, q);
+				        response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		"New Item: " + t, 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.GET:
+                    	item = itemList.getItemFromTitle(msg.getData().toString());
+				        response = new Message(
+				        		Header.INV, 
+				        		Header.DATA, 
+				        		item, 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+				        break;
+                    	
                     }
                     return response;
                 }
@@ -175,13 +209,7 @@ class Server {
 					    Member newMember = new Member(name);
 
 					    // Check if userID already exists (assuming userID is generated inside Member(name))
-					    boolean exists = false;
-					    for (int i = 0; i < memberList.getNumMembers(); i++) {
-					        if (memberList.getIndex(i).getUserID().equalsIgnoreCase(newMember.getUserID())) {
-					            exists = true;
-					            break;
-					        }
-					    }
+					    boolean exists = (memberList.searchMember(newMember.getUserID()) != null);
 
 					    if (exists) {
 					        System.out.println("Account already exists for userID: " + newMember.getUserID());
@@ -215,7 +243,7 @@ class Server {
                                 String pass = credentials[1];  // Second part after the comma
 
                                 // Attempt login
-                                Object goodCred = memberList.attemptLogin(user, pass);
+                                Object goodCred = staffList.attemptLogin(user, pass);
                                 
                                 if(goodCred == null) {
                                 	System.out.println("Wrong Password");
@@ -234,7 +262,7 @@ class Server {
 
                         	
                         case Header.EDIT:
-                            // Handle Account edit by overwriting current account with msg.getData() which should be a member
+                            memberList.editMember((Member) msg.getData());
                             response = new Message(Header.NET, Header.ACK, "Account Edited", "server", "client", "client", "server");
                             break;
 
@@ -258,8 +286,52 @@ class Server {
                 }
 
                 private Message handleItemActions(Message msg) {
+                    Message response = null;
+
                     // Handle Item Attention-related actions here
-                    return new Message(Header.NET, Header.ACK, "Item action executed", "server", "client", "server", "client");
+                	String[] parts;
+
+                    switch (msg.getSecondaryHeader()) {
+                    case Header.CHECKIN:
+                    	parts = msg.getData().toString().split(",");
+                    	System.out.println(parts[1] + " checked in " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " checked in " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.CHECKOUT:
+                    	parts = msg.getData().toString().split(",");
+                    	System.out.println(parts[1] + " checked out " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " checked out " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    	
+                    case Header.RESERVE:
+                    	parts = msg.getData().toString().split(",");
+                    	System.out.println(parts[1] + " reserved " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " reserved " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
+                    	break;
+                    }
+                    return response;
                 }
 
                 private Message handleNetworkActions(Message msg) {

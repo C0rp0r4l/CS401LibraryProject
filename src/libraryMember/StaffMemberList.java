@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class StaffMemberList {
     private Integer numMembers;
 	private StaffMember[] mArray;
-	private String sourceName = "staffMemberList";
+	private String sourceName = "memberList";
 	private boolean modified = false;
 	
 	
@@ -17,7 +17,7 @@ public class StaffMemberList {
 	}
 	
 	public void setFilename(String filename) {
-		sourceName = sourceName.concat(filename);
+		sourceName = filename;
 	}
 	
 	public String toString() {
@@ -31,7 +31,7 @@ public class StaffMemberList {
 		return list;
 	}
 
-	public Member searchMember(String memberId) {
+	public StaffMember searchMember(String memberId) {
 	    int low = 0;
 	    int high = numMembers - 1;
 
@@ -64,13 +64,13 @@ public class StaffMemberList {
 		return "User not found";
 	}
 
-	public String getAccountHold(String id) {
+	public Boolean getAccountHold(String id) {
 		for(int i = 0; i < numMembers; i++) {
 			if(mArray[i].getUserID().compareTo(id) == 0) {
 				return mArray[i].getAccountHold();
 			}
 		}
-		return "User not found";
+		return null;
 	}
 	
 	public void removeMember(String id) {
@@ -96,6 +96,21 @@ public class StaffMemberList {
 		StaffMember temp = new StaffMember(name);
 		mArray[numMembers] = temp;
 	}
+	
+	public Object attemptLogin(String u, String p) {
+		System.out.println(u + " " + p);
+		StaffMember m = searchMember(u);
+		if(m != null) {
+			if(m.getPassword().equals(p)) {
+				return m;
+			}
+			return null;
+		}
+		
+		return 1;
+	}
+	
+
 	
 	public void saveList() {
 		if(modified == false) {
@@ -144,7 +159,7 @@ public class StaffMemberList {
 				String accountHold = scanner.next();
 				Member temp = new Member(name, userID, strikes, accountHold);
 				
-				mArray[numMembers] = temp;
+				mArray[numMembers] = (StaffMember) temp;
 				numMembers++;
 			}
 			scanner.close();

@@ -35,6 +35,13 @@ public class Item implements Serializable {
         memberList = new String[100];
     }
     
+    public boolean isCheckedOut() {
+    	if(numMember >= quantity) {
+    		return true;
+    	}
+    	return false;
+    }
+    
     public Boolean addMember(String id) {
         if(memberList.length >= quantity) {
             return false;

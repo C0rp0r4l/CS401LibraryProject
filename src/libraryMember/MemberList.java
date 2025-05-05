@@ -16,7 +16,7 @@ public class MemberList {
 	}
 	
 	public void setFilename(String filename) {
-		sourceName = sourceName.concat(filename);
+		sourceName = filename;
 	}
 	
 	public String toString() {
@@ -28,6 +28,19 @@ public class MemberList {
 			list = list.concat(temp);
 		}
 		return list;
+	}
+	
+	public Object attemptLogin(String u) {
+		System.out.println(u);
+		Member m = searchMember(u);
+		if(m != null) {
+				return m;
+		}
+		return null;
+	}
+	
+	public Member getIndex(int i) {
+		return mArray[i];
 	}
 
 	public Member searchMember(String memberId) {
@@ -49,6 +62,51 @@ public class MemberList {
 
 	    return null; // Not found
 	}
+	
+	public void addMember(Object obj) {
+	    Member newMember = null;
+
+	    // Determine the input type
+	    if (obj instanceof String) {
+	        newMember = new Member((String) obj);
+	    } else if (obj instanceof Member) {
+	        newMember = (Member) obj;
+	    } else {
+	        System.out.println("Invalid type passed to addMember.");
+	        return;
+	    }
+
+	    // Resize array if needed
+	    if (numMembers == mArray.length) {
+	        Member[] temp = new Member[numMembers * 2];
+	        for (int i = 0; i < numMembers; i++) {
+	            temp[i] = mArray[i];
+	        }
+	        mArray = temp;
+	    }
+
+	    // Find insert position based on first name
+	    int insertPos = 0;
+	    while (insertPos < numMembers && mArray[insertPos].getUserID().compareToIgnoreCase(newMember.getName()) < 0) {
+	        insertPos++;
+	    }
+
+	    // Shift elements to the right to make room
+	    for (int i = numMembers; i > insertPos; i--) {
+	        mArray[i] = mArray[i - 1];
+	    }
+
+	    // Insert new member
+	    mArray[insertPos] = newMember;
+	    numMembers++;
+	    
+	    setModified(true);
+	    saveList();
+	}
+	
+	public void setModified(boolean m) {
+		modified = m;
+	}
 
 	public Integer getNumMembers() {
 		return numMembers;
@@ -62,14 +120,28 @@ public class MemberList {
 		}
 		return "User not found";
 	}
+	
+	 public Boolean editMember(Member m) {
+	        for(int i = 0; i < numMembers; i++) {
+	            if(mArray[i].getUserID().compareTo(m.getUserID()) == 0) {
+	                removeMember(mArray[i].getUserID());
+	                Member temp = new Member(m.getName(), m.getUserID(), m.getStrikes(), String.valueOf(m.getAccountHold()));
+	                mArray[i] = temp;
+	    	        saveList();
+	                return true;
+	            }
+	        }
+	        saveList();
+	        return false;
+	    }
 
-	public String getAccountHold(String id) {
+	public Boolean getAccountHold(String id) {
 		for(int i = 0; i < numMembers; i++) {
 			if(mArray[i].getUserID().compareTo(id) == 0) {
 				return mArray[i].getAccountHold();
 			}
 		}
-		return "User not found";
+		return null;
 	}
 	
 	public void removeMember(String id) {
@@ -82,8 +154,7 @@ public class MemberList {
 		}
 	}
 	
-	//returns userID
-	public String addMember(String name) {
+	public void addMember(String name) {
 		
 		if(mArray.length == numMembers) {
 			Member[] temp = new Member[numMembers*2];
@@ -92,11 +163,9 @@ public class MemberList {
 			}
 			mArray = temp;
 		}
-
 		
 		Member temp = new Member(name);
 		mArray[numMembers] = temp;
-		return temp.getUserID();
 	}
 	
 	public void saveList() {

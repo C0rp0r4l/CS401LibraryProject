@@ -1,31 +1,19 @@
 package libraryMember;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Scanner;
 
 public class Location {
     private String locationName;
     private ItemList locationInventory;
-    private ItemList reserveItemList;
-    private ItemList rentalItemList;
     private StaffMemberList locationStaff;
     
     // Constructor for new location
     public Location(String name) {
         this.locationName = name;
-        this.locationInventory = new ItemList(itemListType.Library, name);
-        this.reserveItemList = new ItemList(itemListType.Reservation, name);
-        this.rentalItemList = new ItemList(itemListType.Rental, name);
+        this.locationInventory = new ItemList(itemListType.Library);
         this.locationStaff = new StaffMemberList();
-
-        locationStaff.setFilename(name);
-
-        locationInventory.load();
-        reserveItemList.load();
-        rentalItemList.load();
-        locationStaff.loadList();
+        this.locationInventory.load();
+        this.locationStaff.loadList();
     }
 
     // Getters
