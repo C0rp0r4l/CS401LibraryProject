@@ -1,8 +1,4 @@
-Fo2023Re177560,Fourth Wing,2023,Rebecca Yarros,Hayward Library,Aly223820
-Fo2023Re391071,Fourth Wing,2023,Rebecca Yarros,null,null
-Fo2023Re239892,Fourth Wing,2023,Rebecca Yarros,null,null
-Re2014Pi218210,Red Rising,2014,Pierce Brown,Concord Library,null
-Re2014Pi255851,Red Rising,2014,Pierce Brown,Hayward Library,null
-Re2014Pi351162,Red Rising,2014,Pierce Brown,null,null
-Re2014Pi289733,Red Rising,2014,Pierce Brown,null,Ean375340
-Re2014Pi349474,Red Rising,2014,Pierce Brown,null,Aly223820
+001,The Hobbit,1937,J.R.R. Tolkien,5,2,Jor876,Lui408
+002,1984,1949,George Orwell,3,1,Rob887
+003,Dune,1965,Frank Herbert,4,1,Jor876
+He2002Jo380960,Hello,2002,Jordan,4,0

@@ -1,4 +1,4 @@
-package scmot;
+package libraryMember;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,20 +51,24 @@ public class ItemList implements Serializable{
     }
 
     public Boolean addOwner(String memberID, String itemID) {
-        try {
-        	System.out.println(itemID);
-            Item item = getItemFromID(itemID);
-        	System.out.println(item);
-            item.setOwner(memberID);
-        	System.out.println(item.getOwner() + " Owns " + item);
-            save();
-            return true; // success
-        } catch (Exception e) {
-            return false; // something went wrong
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
+            try {
+                Item item = getItemFromID(itemID);
+                item.setOwner(memberID);
+                save();
+                return true; // success
+            } catch (Exception e) {
+                return false; // something went wrong
+            }
         }
-     }
+    }
 
     public Boolean removeOwner(String itemID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
             try {
                 Item item = getItemFromID(itemID);
                 item.removeOwner();
@@ -73,9 +77,13 @@ public class ItemList implements Serializable{
             } catch (Exception e) {
                 return false; // something went wrong
             }
+        }
     }
     
     public Boolean addLoc(String locID, String itemID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
             try {
                 Item item = getItemFromID(itemID);
                 item.setLoc(locID);
@@ -85,8 +93,12 @@ public class ItemList implements Serializable{
                 return false; // something went wrong
             }
         }
+    }
 
     public Boolean removeLoc(String itemID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
             try {
                 Item item = getItemFromID(itemID);
                 item.removeLoc();
@@ -96,8 +108,12 @@ public class ItemList implements Serializable{
                 return false; // something went wrong
             }
         }
+    }
     
     public Boolean handleReservation(String itemID, String memberID) {
+        if (this.type == itemListType.Library) {
+            return false;
+        } else {
             try {
                 Item item = getItemFromID(itemID);
                 item.handleReservation(memberID);
@@ -107,6 +123,7 @@ public class ItemList implements Serializable{
                 return false; // something went wrong
             }
         }
+    }
     
 	//NEW FUNCTION ADDED BY JORDAN
 	public ItemList getItemsFromTitle(String title) {
@@ -124,7 +141,7 @@ public class ItemList implements Serializable{
 	
 	public Item getItemFromID(String id) {
 		for(int i = 0; i < numItems; i++) {
-			if(iArray[i].getID().compareTo(id) == 0) {
+			if(iArray[i].getTitle().compareTo(id) == 0) {
 				return iArray[i];
 			}
 		}
@@ -142,7 +159,6 @@ public class ItemList implements Serializable{
             iArray = newArray;
         }
         iArray[numItems] = temp;
-    	System.out.println("Added " + iArray[numItems] + " to Array");
         numItems++;
         modified = true;
         save();
@@ -212,11 +228,14 @@ public class ItemList implements Serializable{
     }
 
     public void save() {
+        if(modified == false) {
+            return;
+        }
+        
         try {
             FileWriter out = new FileWriter(sourceName);
             
             for(int i = 0; i < numItems; i++) {
-            	System.out.println(iArray[i].toString());
                 out.write(iArray[i].toString() + "\n");
             }
             

@@ -10,7 +10,16 @@ public class Member {
 	boolean accountHold;
 	private String name;
 	private int strikes;
+	private boolean banned;
 
+	
+	public Member() {
+	    this.name = "";
+	    this.userID = "";
+	    this.accountHold = false;
+	    this.strikes = 0;
+	    this.banned = false;
+	}
 	
 	//methods
 	//constructor
@@ -41,6 +50,15 @@ public class Member {
 		accountHold = Boolean.valueOf(a);
 	}
 	
+	//NEW FUNCTION BY JORDAN
+	public boolean addStrike() {
+		strikes++;
+		if(strikes == 3) {
+			banned = true;
+		}
+		return banned;
+	}
+	
 	// get userID
 	public String getUserID() {
 	    return this.userID;
@@ -62,8 +80,8 @@ public class Member {
 	}
 	
 	// Returns true/false of the account hold as a string
-	public String getAccountHold() {		
-		return String.valueOf(accountHold);
+	public Boolean getAccountHold() {		
+		return accountHold;
 	}
 	
 	//set account hold status

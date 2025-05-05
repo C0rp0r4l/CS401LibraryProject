@@ -1,4 +1,4 @@
-package scmot;
+package libraryMember;
 
 public enum Header {
     // Inventory
@@ -18,17 +18,16 @@ public enum Header {
     CREATE,     // Create - Account AccountA (Create account with message object)
     DELETE,     // Delete - String AccountID (Delete Account assoc. with ID)
     STATUS,     // Status - Account Account A Status Status (Set status of accountA to status)
-    MAKESTAFF,  //MakeStaff - String MemberID (Make account assoc with memberid into a staffmember)
     //EDIT,     // Edit - Account AccountA (Replace account with AccountA, which is a new Account object with changes implemented)
     // GET already defined above (reuse GET)
     // DATA already defined above (reuse DATA)
 
     // Location Management
     LOC,
-    // CREATE   String name
-    // ADD		String StaffMemberID (Add staff to Location)
-    // GET
-    // DATA
+    // CREATE already defined above (reuse CREATE)
+    // ADD already defined above (reuse ADD)
+    // GET already defined above (reuse GET)
+    // DATA already defined above (reuse DATA)
 
     // Item Attainment
     ITEM,

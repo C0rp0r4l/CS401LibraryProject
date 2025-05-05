@@ -1,4 +1,4 @@
-package scmot;
+package libraryMember;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -11,10 +11,8 @@ public class Client {
     private static final int Port = 7777; // the server is expected to be listening on this port
     private static boolean isConnected = false; // just a simple flag to keep track of our connection status
     private static Member member = null;
-    
 
     public static void main(String[] args) {
-    	boolean shouldExit = false;
         try (Socket socket = new Socket(serverAddress, Port);
              ObjectOutputStream outSocket = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream inSocket = new ObjectInputStream(socket.getInputStream());
@@ -24,15 +22,15 @@ public class Client {
             System.out.println("Connected to server at " + serverAddress + ":" + Port);
 
             Message inboundMessage;
-            while (!shouldExit) {
+            while (true) {
             	inboundMessage = (Message) inSocket.readObject();
                 if(inboundMessage != null) {
                 	processMessage(inboundMessage, outSocket, inSocket, scanner);
                 }
                 
-                while (member != null && !shouldExit) {
+                while (member != null) {
                 	displayMenu(); // show the menu
-                    int choice = getValidChoice(scanner, 7); // grab user input and validate it
+                    int choice = getValidChoice(scanner, 6); // grab user input and validate it
 
                     switch (choice) {
                         case 1: { //add member
@@ -166,27 +164,8 @@ public class Client {
                                 break;
                 	        }
                 	        break;
-                        }
-                        case 7:
-                            Message discMsg = new Message(
-                                    Header.NET, 
-                                    Header.ACK, 
-                                    "Disconnecting...",
-                                    "client",
-                                    "server",
-                                    "server",
-                                    "client");
-                            outSocket.writeObject(discMsg);
                             
-                            // OPTIONAL: wait for server confirmation (recommended for clean exit)
-                            Message response = (Message) inSocket.readObject();
-                            if (response != null && response.getSecondaryHeader() == Header.ACK) {
-                                System.out.println("Server acknowledged disconnect.");
-                            }
-
-                            // Let socket shutdown cleanly
-                            shouldExit = true;
-                            break; // exit switch, loop ends naturally and resources are closed in try-with-resources
+                        }
 
                         default: {
                             System.out.println("Invalid option. Try again."); // just in case somehow it’s wrong
@@ -265,8 +244,7 @@ public class Client {
                 	        else {
                 	        	System.out.println("2. Add Hold");
                 	        }
-                	        System.out.println("3. Make Staff Member");
-                	        int choice = getValidChoice(scanner, 3);
+                	        int choice = getValidChoice(scanner, 2);
 
                 	        switch(choice) {
                 	        case 1:
@@ -281,9 +259,7 @@ public class Client {
                                     		"client");
                                     try {
         								out.writeObject(editMsg);
-        	                            Message inboundMessage = (Message) in.readObject(); // wait for reply
-        	                            processMessage(inboundMessage, out, in, scanner);
-        							} catch (IOException | ClassNotFoundException e) {
+        							} catch (IOException e) {
         								e.printStackTrace();
         							}
                 	        	break;
@@ -304,28 +280,10 @@ public class Client {
                                 		"client");
                                 try {
     								out.writeObject(holdMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
+    							} catch (IOException e) {
     								e.printStackTrace();
     							}
                 	        	break;
-                	        case 3:
-                	        	Message staffMsg = new Message(
-                                		Header.ACCT, 
-                                		Header.MAKESTAFF, 
-                                		member.getUserID(),
-                                		"client",
-                                		"server",
-                                		"server",
-                                		"client");
-                                try {
-    								out.writeObject(staffMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
-    								e.printStackTrace();
-    							}
                 	        default:
                 	        	System.out.println("Please choose a valid menu option.");
                 	        	break;
@@ -342,7 +300,6 @@ public class Client {
             case Header.LOC:
             	switch(msg.getSecondaryHeader()) {
             	case Header.DATA:
-            		System.out.println(msg.getData().toString());
             		if(msg.getData() == null) {
             			System.out.println("The Location you're looking for doesn't exist");
             		}
@@ -369,9 +326,7 @@ public class Client {
                                 		"client");
                                 try {
     								out.writeObject(staffMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
+    							} catch (IOException e) {
     								e.printStackTrace();
     							}
             	        	break;
@@ -432,9 +387,7 @@ public class Client {
                                 		"client");
                                 try {
     								out.writeObject(checkInMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
+    							} catch (IOException e) {
     								e.printStackTrace();
     							}
             	        	}
@@ -451,9 +404,7 @@ public class Client {
                                 		"client");
                                 try {
     								out.writeObject(checkOutMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
+    							} catch (IOException e) {
     								e.printStackTrace();
     							}
             	        		
@@ -473,9 +424,7 @@ public class Client {
                                 		"client");
                                 try {
     								out.writeObject(reserveMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
+    							} catch (IOException e) {
     								e.printStackTrace();
     							}
             	        	}
@@ -494,9 +443,7 @@ public class Client {
                                 		"client");
                                 try {
     								out.writeObject(reserveMsg);
-    								Message inboundMessage = (Message) in.readObject(); // wait for reply
-    	                            processMessage(inboundMessage, out, in, scanner);
-    							} catch (IOException | ClassNotFoundException e) {
+    							} catch (IOException e) {
     								e.printStackTrace();
     							}
             	        	}
@@ -514,9 +461,7 @@ public class Client {
                             		"client");
                             try {
 								out.writeObject(reserveMsg);
-								Message inboundMessage = (Message) in.readObject(); // wait for reply
-	                            processMessage(inboundMessage, out, in, scanner);
-							} catch (IOException | ClassNotFoundException e) {
+							} catch (IOException e) {
 								e.printStackTrace();
 							}
             	        break;
@@ -568,7 +513,6 @@ public class Client {
         System.out.println("4. Search Location");
         System.out.println("5. Add Item");
         System.out.println("6. Search Item");
-        System.out.println("7. Exit Program");
     }
 
     private static int getValidChoice(Scanner scanner, int limit) {

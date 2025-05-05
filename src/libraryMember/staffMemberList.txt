@@ -1,10 +1,4 @@
 Jordan,Jor876,Anl2l,0,false
-<<<<<<< HEAD
 Luis,Lui408,lvBdT,0,false
 Matthew,Mat199,7B29K,0,false
 Robert,Rob887,2brsf,0,false
-=======
-Arsen,Ars302920,MU0DA,0,false
-Joshua,Jos345900,j4UGx,0,false
-Ricky,Ric299151,rEHPX,0,false
->>>>>>> 4cdfb2fec0b8f15d4510487f382727fffdb2e88d

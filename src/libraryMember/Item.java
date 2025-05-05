@@ -1,4 +1,4 @@
-package scmot;
+package libraryMember;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -53,7 +53,7 @@ public class Item implements Serializable {
     }
     
     public boolean isCheckedOut() {
-    	return (ownedBy != null && !("null".equals(ownedBy)));
+    	return (ownedBy != null && ownedBy != "null");
     }
     
     public void setOwner(String id) {

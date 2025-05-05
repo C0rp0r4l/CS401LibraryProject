@@ -1,17 +1,12 @@
-package scmot;
+package libraryMember;
 
 import java.io.File;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Scanner;
 
-public class Location implements Serializable {
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-	private String locationName;
+public class Location {
+    private String locationName;
     private static ItemList rentalItemList;
     private static ItemList reserveItemList;
     private static ItemList locationInventory;
@@ -46,7 +41,6 @@ public class Location implements Serializable {
 
     // Getters
     public String getLocationName() {
-    	System.out.println(locationName);
         return locationName;
     }
     

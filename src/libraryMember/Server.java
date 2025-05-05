@@ -1,4 +1,4 @@
-package scmot;
+package libraryMember;
 
 import java.io.*;
 import java.net.*;
@@ -91,12 +91,12 @@ class Server {
                 System.out.println("Sent login request to client.");
                 
                         while (true) {
-                        	if (clientSocket.getInputStream().available() > 0) {
-                        	    Object obj = in.readObject();
-                        	    if (!(obj instanceof Message)) {
-                        	        System.out.println("Received unknown object type");
-                        	        return;
-                        	    }
+                            Object obj = in.readObject();
+                            if (!(obj instanceof Message)) {
+                                System.out.println("Received unknown object type");
+                                continue;
+                            }
+
                             Message msg = (Message) obj;
                             System.out.println("Recieved Message " + msg.getPrimaryHeader());
                             Message response;
@@ -139,13 +139,6 @@ class Server {
                                     out.writeObject(response);
                                     break;
                             }
-                        	} else {
-                        	    try {
-                        	        Thread.sleep(100); // reduce CPU usage
-                        	    } catch (InterruptedException e) {
-                        	        Thread.currentThread().interrupt();
-                        	    }
-                        	}
                         }
                     } catch (IOException | ClassNotFoundException e) {
                         e.printStackTrace();
@@ -212,7 +205,7 @@ class Server {
                     	String id = sec[0];           // item id
                     	String name = sec[1]; 		   // location name
                     	item = (itemList.getItemFromID(id));
-                    	itemList.addLoc(name, id);
+                    	item.setLoc(name);
 				        response = new Message(
 				        		Header.NET, 
 				        		Header.ACK, 
@@ -300,14 +293,6 @@ class Server {
                             memberList.editMember((Member) msg.getData());
                             response = new Message(Header.NET, Header.ACK, "Account Edited", "server", "client", "client", "server");
                             break;
-                            
-                        case Header.MAKESTAFF:
-                        	Member member = memberList.searchMember(msg.getData().toString());
-                        	staffList.addMember(member);
-                        	memberList.removeMember(member.getUserID());
-                            response = new Message(Header.NET, Header.ACK, member.getUserID() + " is now staff.", "server", "client", "client", "server");
-                            break;
-                        	
 
                         case Header.GET:
                             // Handle Account data retrieval
@@ -335,7 +320,6 @@ class Server {
                 	
                 	case Header.GET:
                 		loc = locationList.searchLocation((String) msg.getData());
-                		System.out.println(loc.toString());
                         response = new Message(Header.LOC, Header.DATA, loc, "server", "client", "server", "client");
                 		break;
                 		
@@ -384,29 +368,16 @@ class Server {
                     	
                     case Header.CHECKOUT:
                     	parts = msg.getData().toString().split(",");
-                    	if(memberList.searchMember(parts[1]) != null) {
-
-                        	itemList.addOwner(parts[1], parts[0]);
-                        	System.out.println(parts[1] + " checked out " + parts[0]);
-                        	response = new Message(
-    				        		Header.NET, 
-    				        		Header.ACK, 
-    				        		parts[1] + " checked out " + parts[0], 
-    				        		"server", 
-    				        		"client", 
-    				        		"client", 
-    				        		"server");
-                    	}else {
-                    		response = new Message(
-    				        		Header.NET, 
-    				        		Header.ERR, 
-    				        		parts[1] + " is not an existing Member.", 
-    				        		"server", 
-    				        		"client", 
-    				        		"client", 
-    				        		"server");
-                    	}
-
+                    	itemList.addOwner(parts[1], parts[0]);
+                    	System.out.println(parts[1] + " checked out " + parts[0]);
+                    	response = new Message(
+				        		Header.NET, 
+				        		Header.ACK, 
+				        		parts[1] + " checked out " + parts[0], 
+				        		"server", 
+				        		"client", 
+				        		"client", 
+				        		"server");
                     	break;
                     	
                     case Header.RESERVE:
@@ -427,24 +398,8 @@ class Server {
                 }
 
                 private Message handleNetworkActions(Message msg) {
-                    Message response = null;
-					switch(msg.getSecondaryHeader()) {
-                    case Header.ACK:
-                    	response = new Message(
-				        		Header.NET, 
-				        		Header.ACK, 
-				        		"Acknowledgement of Disconnection", 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-                    	break;
-                    	
-					default:
-						break;
-                    }
-					return response;
+                    // Handle Network-related actions here
+                    return new Message(Header.NET, Header.ACK, "Network action executed", "server", "client", "server", "client");
                 }
             }
         }
-        
