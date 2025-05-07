@@ -1,4 +1,4 @@
-package libraryMember;
+package scmot;
 
 public enum Header {
     // Inventory

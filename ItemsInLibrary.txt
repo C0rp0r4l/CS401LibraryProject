@@ -1,0 +1,11 @@
+Bo2002Bo143190,Book,2002,Book,null,null
+Bo2002Bo115631,Book,2002,Book,null,null
+Bo2002Bo346512,Book,2002,Book,null,null
+Bo2002Bo299643,Book,2002,Book,null,null
+Bo2002Bo295154,Book,2002,Book,null,null
+Ha2002Ha320355,Hands,2002,Hands,null,null
+Ha2002Ha273636,Hands,2002,Hands,null,null
+Ha2002Ha102057,Hands,2002,Hands,null,null
+Ha2002Ha394708,Hands,2002,Hands,null,null
+Ha2002Ha340719,Hands,2002,Hands,null,null
+CO2002ma3476310,Cool,2002,man,Hayward,null

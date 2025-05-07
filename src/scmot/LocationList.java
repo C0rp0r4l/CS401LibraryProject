@@ -1,4 +1,4 @@
-package libraryMember;
+package scmot;
 
 import java.io.File;
 import java.io.FileWriter;
