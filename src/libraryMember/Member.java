@@ -51,6 +51,10 @@ public class Member implements Serializable {
 	public String getName() {
 		return name;
 	}
+
+	public void addStrike() {
+		strikes++;
+	}
 	
 	// Returns a string with format Name,userID,Strikes,accountHold 
 	// Example: Ricky Ip,RIC412,0,false

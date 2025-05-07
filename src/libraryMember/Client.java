@@ -258,7 +258,7 @@ public class Client {
                 			System.out.println(member.toString());
                 			System.out.println("What would you like to do with this Member?");
                 	        System.out.println("1. Add a Strike");
-                	        Boolean held = member.getAccountHold();
+                	        Boolean held = Boolean.valueOf(member.getAccountHold());
                 	        if(held) {
                     	        System.out.println("2. Remove Hold");
                 	        }
