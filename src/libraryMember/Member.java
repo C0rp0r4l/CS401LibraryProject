@@ -1,30 +1,19 @@
 package libraryMember;
 
-import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.io.Serializable;
 
-public class Member implements Serializable{
-	/**
-	 * 
-	 */
+public class Member implements Serializable {
 	private static final long serialVersionUID = 1L;
 	//variables
-	static private int count = 0;
 	private String userID;
-	//private String userPassword;
-	boolean accountHold;
+	boolean accountHold = false;
 	private String name;
 	private int strikes;
-	private boolean banned;
+	boolean accountBanned = false;
 
-	
-	public Member() {
-	    this.name = "";
-	    this.userID = "";
-	    this.accountHold = false;
-	    this.strikes = 0;
-	    this.banned = false;
-	}
 	
 	//methods
 	//constructor
@@ -33,35 +22,27 @@ public class Member implements Serializable{
 		String namePrefix = name.length() >= 3 ? name.substring(0, 3) : name;
 		//now generate 3 random digits
 		Random rand = new Random();
-		//gives a random number between 10000 - 40000
-		int randomDigits = rand.nextInt(30000) + 10000;
+		//gives a random number between 100 and 999
+		int randomDigits = rand.nextInt(900) + 100;
 		//now append the random digits onto the name prefix for our new userID
-		this.userID = namePrefix + randomDigits + count;
+		this.userID = namePrefix + randomDigits;
 		//now construct the rest of the variables
-		this.accountHold = false;
+
 		this.name = name;
 		this.strikes = 0;
-		
-		count++;
+
 		//REMEMBER THE MAIN WAY TO FIND A MEMBER IS WITH THE USERID
+		System.out.println("New Member: " + this.userID);
 	}
 	
 	// Constructor ONLY for loading already existing members from a file since ID is randomly generated
-	// name, userID, strikes, accountHold
-	public Member(String n, String uID, String s, String a) {
+	// name, userID, strikes, accountHold, Banned
+	public Member(String n, String uID, String userPass, String s, String a, Boolean b) {
 		name = n;
 		userID = uID;
 		strikes = Integer.valueOf(s);
 		accountHold = Boolean.valueOf(a);
-	}
-	
-	//NEW FUNCTION BY JORDAN
-	public boolean addStrike() {
-		strikes++;
-		if(strikes == 3) {
-			banned = true;
-		}
-		return banned;
+		accountBanned = b;
 	}
 	
 	// get userID
@@ -76,7 +57,7 @@ public class Member implements Serializable{
 	// Returns a string with format Name,userID,Strikes,accountHold 
 	// Example: Ricky Ip,RIC412,0,false
 	public String toString() {
-		return (name + "," + userID + "," + String.valueOf(strikes) + "," + String.valueOf(accountHold));
+		return (name + "," + userID + "," + String.valueOf(strikes) + "," + String.valueOf(accountHold) + "," + String.valueOf(accountBanned));
 	}
 	
 	// Returns the # of strikes as a string
@@ -85,8 +66,12 @@ public class Member implements Serializable{
 	}
 	
 	// Returns true/false of the account hold as a string
-	public Boolean getAccountHold() {		
-		return accountHold;
+	public String getAccountHold() {
+		return String.valueOf(accountHold);
+	}
+
+	public String getBannedStatus() {
+		return String.valueOf(accountBanned);
 	}
 	
 	//set account hold status
@@ -96,7 +81,6 @@ public class Member implements Serializable{
 			this.accountHold = true;
 			return;
 		}
-		
 		else {
 			this.accountHold = false;
 		}

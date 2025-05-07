@@ -1,5 +1,4 @@
 package libraryMember;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Random;
@@ -10,10 +9,11 @@ public class Item implements Serializable {
     private String title;
     private String year;
     private String author;
-    private String location = null;
-    private String ownedBy = null;
+    private String location = "null";
+    private String ownedBy = "null";
     private ArrayList<String> reserved = new ArrayList<String>();
     
+    // Item creation
     public Item(String t, String y, String a) {
         title = t;
         year = y;
@@ -26,13 +26,15 @@ public class Item implements Serializable {
         count++;
     }
     
-    public Item(String i, String t, String y, String a, String loc, String own) {
+    // For saving and loading an item 
+    public Item(String i, String t, String y, String a, String loc, String own, ArrayList<String> r) {
     	itemID = i;
         title = t;
         year = y;
         author = a;
         location = (loc == "null" ? null : loc);
         ownedBy = (own == "null" ? null : own);
+        reserved = r;
     }
     
     public void handleReservation(String id) {
@@ -61,7 +63,7 @@ public class Item implements Serializable {
     }
 
     public void removeOwner() {
-    	ownedBy = null;
+    	ownedBy = "null";
     }
     
     public String getOwner() {
@@ -88,8 +90,22 @@ public class Item implements Serializable {
         return location == id;
     }
 
+    // itemID,Title,Year,Author,Location,RenterID,int of reserved,reservedID's
     public String toString() {
-        return itemID + "," + title + "," + year + "," + author + "," + location + "," + ownedBy; //need to write reserved list too
+        // Print out the information that always exists first according to the specified format
+        // Check if the reserved.size() is bigger than zero or not
+        // if it is print out a list of IDs of the members that are reserving this item
+        // if not just return temp
+        String temp = itemID + "," + title + "," + author + "," + location + "," + ownedBy + "," + reserved.size();
+        if(reserved.size() > 0) {
+            String tArray[] = (String[]) reserved.toArray();
+            for(int i = 0; i < reserved.size(); i++) {
+                String reserveID = "," + tArray[i];
+                temp = temp.concat(reserveID);
+            }
+        }
+
+        return temp;
     }
     
     public String getID() {

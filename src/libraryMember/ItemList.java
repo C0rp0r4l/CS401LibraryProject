@@ -5,36 +5,14 @@ import java.util.Arrays;
 import java.util.Scanner;
 
 public class ItemList implements Serializable{
-    /**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	private Integer numItems;
     private Item[] iArray;
-    private String sourceName;
-    private itemListType type;
-    private boolean modified = false;
+    private String sourceName = "masterItemList";
     
-    public ItemList(itemListType t, String name) {
+    public ItemList() {
         numItems = 0;
         iArray = new Item[1000];
-        type = t;
-        if(type == itemListType.Rental) {
-            sourceName = name + "ItemRentalList.txt";
-        }
-        else if(type == itemListType.Reservation) {
-            sourceName = name + "ItemReservationList.txt";
-        }
-        else if(type == itemListType.Library) {
-            sourceName = name + "ItemsInLibrary.txt";
-        }
-    }
-    
-    public ItemList(String sourcename, itemListType t) {
-        numItems = 0;
-        iArray = new Item[1000];
-        type = t;
-        sourceName = sourcename;
     }
     
     public String toString() {
@@ -110,7 +88,7 @@ public class ItemList implements Serializable{
     
 	//NEW FUNCTION ADDED BY JORDAN
 	public ItemList getItemsFromTitle(String title) {
-		ItemList items = new ItemList(itemListType.Library, "");
+		ItemList items = new ItemList();
 		for(int i = 0; i < numItems; i++) {
 			if(iArray[i].getTitle().compareTo(title) == 0) {
 				items.addItem(iArray[i]);
@@ -144,7 +122,7 @@ public class ItemList implements Serializable{
         iArray[numItems] = temp;
     	System.out.println("Added " + iArray[numItems] + " to Array");
         numItems++;
-        modified = true;
+
         save();
     }
     
@@ -160,12 +138,9 @@ public class ItemList implements Serializable{
         }
         iArray[numItems] = item;
         numItems++;
-        modified = true;
+
     }
-    
-    public itemListType getType() {
-        return type;
-    }
+
     
     public int getNumItems() {
         return numItems;
@@ -245,10 +220,22 @@ public class ItemList implements Serializable{
                 String author = scanner.next();
                 String loc = scanner.next();
                 String own = scanner.next();
-                //need to parse reserved list
-                Item temp = new Item(id, title, year, author, loc, own);//change constructor once resereve list is added
+                // Cast the string "0" or "1" into an integer
+                Integer reserveCount = Integer.valueOf(scanner.next());
+                // Create a temporary list containing all the ids of the members reserving a specific item
+                ArrayList<String> temp = new ArrayList<String>();
+
+                // Loop through the list of ids, add it into the ArrayList temp
+                for(int i = 0; i < reserveCount; i++) {
+                    String reserveID = scanner.next();
+                    temp.add(reserveID);
+                }
+
+                // Create an item using the constructor specifically for saving and loading 
+                Item loadItem = new Item(id, title, year, author, loc, own, temp);
                 
-                addItem(temp);
+                // Add the item into the itemList
+                addItem(loadItem);
             }
             
             scanner.close();

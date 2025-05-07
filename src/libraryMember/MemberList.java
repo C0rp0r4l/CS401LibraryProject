@@ -1,159 +1,192 @@
 package libraryMember;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Scanner;
 
 public class MemberList {
-    private ArrayList<Member> members;
-    private String sourceName = "memberList.txt";
-    private boolean modified = false;
+	private int numMembers;
+	private Member[] mArray;
+	private String sourceName = "memberList.txt";
+	private boolean modified = false;
+	
+	
+	public MemberList() {
+		numMembers = 0;
+		mArray = new Member[200];
+	}
+	
+	public void setFilename(String filename) {
+		sourceName = filename;
+	}
+	
+	public String toString() {
+		String list = "";
+		
+		for(int i = 0; i < numMembers; i++) {
+			String temp = mArray[i].getName() + " " + mArray[i].getUserID()
+		                  + mArray[i].getStrikes() + " " + mArray[i].getAccountHold() + mArray[i].getBannedStatus() + "\n";
+			list = list.concat(temp);
+		}
+		
+		return list;
+	}
+	
+	/*
+	public Object attemptLogin(String u, String p) {
+		System.out.println(u + " " + p);
+		Member m = searchMember(u);
+		if(m != null) {
+			if(m.getPassword().equals(p)) {
+				return m;
+			}
+			return null;
+		}
+		
+		return 1;
+	}*/
+	
+	public void addMember(Object obj) {
+	    Member newMember = null;
 
-    public MemberList() {
-        members = new ArrayList<>();
-    }
+	    // Determine the input type
+	    if (obj instanceof String) {
+	        newMember = new Member((String) obj);
+	    } else if (obj instanceof Member) {
+	        newMember = (Member) obj;
+	    } else {
+	        System.out.println("Invalid type passed to addMember.");
+	        return;
+	    }
 
-    public void setFilename(String filename) {
-        sourceName = filename;
-    }
+	    // Resize array if needed
+	    if (numMembers == mArray.length) {
+	        Member[] temp = new Member[numMembers * 2];
+	        for (int i = 0; i < numMembers; i++) {
+	            temp[i] = mArray[i];
+	        }
+	        mArray = temp;
+	    }
 
-    public String toString() {
-        StringBuilder list = new StringBuilder();
-        for (Member m : members) {
-            list.append(m.getName()).append(",").append(m.getUserID())
-                .append(",").append(m.getStrikes()).append(",")
-                .append(m.getAccountHold()).append("\n");
-        }
-        return list.toString();
-    }
+	    // Find insert position based on first name
+	    int insertPos = 0;
+	    while (insertPos < numMembers && mArray[insertPos].getUserID().compareToIgnoreCase(newMember.getName()) < 0) {
+	        insertPos++;
+	    }
 
-    public Object attemptLogin(String u) {
-        System.out.println(u);
-        Member m = searchMember(u);
-        return m;
-    }
+	    // Shift elements to the right to make room
+	    for (int i = numMembers; i > insertPos; i--) {
+	        mArray[i] = mArray[i - 1];
+	    }
 
-    public Member getIndex(int i) {
-        return members.get(i);
-    }
+	    // Insert new member
+	    mArray[insertPos] = newMember;
+	    numMembers++;
+	    
+	    setModified(true);
+	    saveList();
+	}
+	
+	public int getNumMembers() {
+		return numMembers;
+	}
+	
+	public Member searchMember(String memberId) {
+	    int low = 0;
+	    int high = numMembers - 1;
 
-    public Member searchMember(String memberId) {
-        for (Member m : members) {
-            if (m.getUserID().equals(memberId)) {
-                return m;
-            }
-        }
-        return null;
-    }
+	    while (low <= high) {
+	        int mid = (low + high) / 2;
+	        int cmp = mArray[mid].getUserID().compareTo(memberId);
 
-    public void addMember(Object obj) {
-        Member newMember = null;
+	        if (cmp == 0) {
+	            return mArray[mid]; // Match found
+	        } else if (cmp < 0) {
+	            low = mid + 1; // Search right half
+	        } else {
+	            high = mid - 1; // Search left half
+	        }
+	    }
 
-        if (obj instanceof String) {
-            newMember = new Member((String) obj);
-        } else if (obj instanceof Member) {
-            newMember = (Member) obj;
-        } else {
-            System.out.println("Invalid type passed to addMember.");
-            return;
-        }
+	    return null; // Not found
+	}
 
-        members.add(newMember);
-        members.sort(Comparator.comparing(Member::getUserID));
+	
+	public Member getIndex(int i) {
+		return mArray[i];
+	}
+	
+	public void saveList() {
+	    if (!modified) {
+	        return;
+	    }
+	    
+	    System.out.println("Saving List");
 
-        setModified(true);
-        saveList();
-    }
+	    File file = new File(sourceName);
 
-    public void setModified(boolean m) {
-        modified = m;
-    }
+	    try {
+	        // Ensure the file exists
+	        if (!file.exists()) {
+	        	System.out.println("file exists");
+	            file.createNewFile();  // Create the file if it doesn't exist
+	        }
 
-    public Integer getNumMembers() {
-        return members.size();
-    }
+	        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+	            for (int i = 0; i < numMembers; i++) {
+	                String line = mArray[i].toString();
+	                writer.write(line);
+	                writer.newLine();  // Adds a newline after each entry
+	            }
+	            modified = false;
+	        }
+	    } catch (IOException e) {
+	        System.out.println("Error saving member list: " + e.getMessage());
+	    }
+	}
 
-    public String getStrikes(String id) {
-        for (Member m : members) {
-            if (m.getUserID().equals(id)) {
-                return m.getStrikes();
-            }
-        }
-        return "User not found";
-    }
+	
+	public void setModified(boolean m) {
+		modified = m;
+	}
+	
 
-    public Boolean editMember(Member m) {
-        for (int i = 0; i < members.size(); i++) {
-            if (members.get(i).getUserID().equals(m.getUserID())) {
-                members.set(i, m);
-                saveList();
-                return true;
-            }
-        }
-        saveList();
-        return false;
-    }
+	public void loadList() {
+	    File file = new File(sourceName);
+	    
+	    try {
+	        if (!file.exists()) {
+	            file.createNewFile();
+	            // No data to load, but file now exists
+	            return;
+	        }
+	    } catch (IOException e) {
+	        System.out.println("Error creating file: " + e.getMessage());
+	        return;
+	    }
 
-    public Boolean getAccountHold(String id) {
-        for (Member m : members) {
-            if (m.getUserID().equals(id)) {
-                return m.getAccountHold();
-            }
-        }
-        return null;
-    }
+	    try (Scanner scanner = new Scanner(file)) {
+	        scanner.useDelimiter(",|\n");
 
-    public void removeMember(String id) {
-        members.removeIf(m -> m.getUserID().equals(id));
-        setModified(true);
-        saveList();
-    }
+	        while (scanner.hasNext()) {
+	            String name = scanner.next();
+	            String userID = scanner.next();
+	            String userPassword = scanner.next();
+	            String strikes = scanner.next();
+	            String accountHold = scanner.next();
+				// Convert string "true" or "false" into a boolean value
+				// Evaluates to true only if it matches exactly true (ignore case), everything else will
+				// evaluate as false
+				Boolean bannedStatus = Boolean.valueOf(scanner.next());
 
-    public void addMember(String name) {
-        Member temp = new Member(name);
-        members.add(temp);
-        members.sort(Comparator.comparing(Member::getUserID));
-        setModified(true);
-        saveList();
-    }
+	            Member temp = new Member(name, userID, userPassword, strikes, accountHold, bannedStatus);
+				// Add into the list of member arrays and increment
+	            mArray[numMembers++] = temp;
+	        }
 
-    public void saveList() {
-        try (FileWriter myWriter = new FileWriter(sourceName)) {
-            for (Member m : members) {
-                myWriter.write(m.toString() + "\n");
-            }
-            modified = false;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	        modified = false;
+	    } catch (Exception e) {
+	        System.out.println("Error reading file of memberList: " + e.getMessage());
+	    }
+	}
 
-    public void loadList() {
-        File file = new File(sourceName);
-        try {
-            if (file.createNewFile()) {
-                return;
-            }
-        } catch (Exception e) {
-            System.out.println("Error opening file");
-        }
-
-        try (Scanner scanner = new Scanner(file)) {
-            scanner.useDelimiter(",|\n");
-
-            while (scanner.hasNext()) {
-                String name = scanner.next();
-                String userID = scanner.next();
-                String strikes = scanner.next();
-                String accountHold = scanner.next();
-                Member temp = new Member(name, userID, strikes, accountHold);
-                members.add(temp);
-            }
-            modified = false;
-        } catch (Exception e) {
-            System.out.println("Error reading file");
-        }
-    }
 }
