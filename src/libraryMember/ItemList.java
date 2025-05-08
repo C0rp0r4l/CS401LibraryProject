@@ -116,9 +116,10 @@ public class ItemList implements Serializable{
     public boolean checkoutItem(String itemId, String memberId) {
         Item item = getItem(itemId);
         if (item != null && item.getOwnedBy() == null) {
-            boolean success = item.setOwnedBy(memberId);
-            if (success) saveItems();
-            return success;
+        	item.setOwnedBy(memberId);
+            saveItems();
+            loadItems();
+            return true;
         }
         return false;
     }

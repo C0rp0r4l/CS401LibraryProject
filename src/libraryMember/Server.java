@@ -276,6 +276,7 @@ public class Server {
                     }
 
                 case Header.GET:
+                	System.out.println(msg.getData().toString());
                     Member found = memberList.getMemberByID(msg.getData().toString());
                     return found != null
                         ? new Message(Header.ACCT, Header.DATA, found, "server", "client", "client", "server")
@@ -419,9 +420,9 @@ public class Server {
                         if (memberList.getMemberByID(memberId) != null) {
                             boolean success = itemList.checkoutItem(itemId, memberId);
                             return new Message(
-                                Header.NET,
-                                success ? Header.ACK : Header.ERR,
-                                success ? memberId + " checked out " + itemId : "Checkout failed",
+                                Header.ITEM,
+                                success ? Header.DATA : Header.ERR,
+                                success ? itemList : "Checkout failed",
                                 "server", "client", "client", "server");
                         } else {
                             return new Message(

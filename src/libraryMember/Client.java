@@ -561,9 +561,34 @@ public class Client {
                 handleNetworkMessage(msg);
                 break;
                 
+            case Header.ITEM:
+            	handleItemMessage(msg, out, in);
+                
             default:
                 System.out.println("Unknown message type received: " + msg.getPrimaryHeader());
         }
+    }
+    
+    //Handle item attainment messages
+    private static void handleItemMessage(Message msg, ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+    		
+    	switch(msg.getSecondaryHeader()) {
+    	case Header.DATA:
+            if (msg.getData().toString().equals("Checkout failed")) {
+                System.out.println("No items found matching the search criteria.");
+            } else if (msg.getData() instanceof ItemList) {
+                ItemList items = (ItemList) msg.getData();
+                if (items.getAllItems().isEmpty()) {
+                    System.out.println("No items found matching the search criteria.");
+                } else {
+                    System.out.println("\nFound " + items.getAllItems().size() + " items:");
+                }
+            }
+            break;
+    		
+    	}
+    
     }
 
     
