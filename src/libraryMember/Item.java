@@ -1,126 +1,97 @@
 package libraryMember;
+
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.List;
 
 public class Item implements Serializable {
-    static private int count = 0;
-    private String itemID;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String itemID;
     private String title;
     private String year;
     private String author;
-    private String location = "null";
-    private String ownedBy = "null";
-    private ArrayList<String> reserved = new ArrayList<String>();
+    private String location;
+    private String ownedBy;
+    private int reserved;
+    private List<String> reservedBy;
     
-    // Item creation
-    public Item(String t, String y, String a) {
-        title = t;
-        year = y;
-        author = a;
-        
-        String temp = t.substring(0, 2) + y.substring(0,4) + a.substring(0,2);
-        Random rand = new Random();
-        int randomDigits = rand.nextInt(30000) + 10000;
-        itemID = temp + randomDigits + count;
-        count++;
-    }
-    
-    // For saving and loading an item 
-    public Item(String i, String t, String y, String a, String loc, String own, ArrayList<String> r) {
-    	itemID = i;
-        title = t;
-        year = y;
-        author = a;
-        location = (loc == "null" ? null : loc);
-        ownedBy = (own == "null" ? null : own);
-        reserved = r;
-    }
-    
-    public void handleReservation(String id) {
-    	if(reserved.contains(id)) {
-    		reserved.remove(id);
-    	}
-    	else {
-    		reserved.add(id);
-    	}
-    }
-    
-    public boolean hasReservations() {
-    	return reserved.size() > 0;
-    }
-    
-    public ArrayList<String> getReservations() {
-    	return reserved;
-    }
-    
-    public boolean isCheckedOut() {
-    	return (ownedBy != null && !("null".equals(ownedBy)));
-    }
-    
-    public void setOwner(String id) {
-        ownedBy = id;
+    public Item(String itemID, String title, String year, String author, 
+               String location, String ownedBy, int reserved, List<String> reservedBy) {
+        this.itemID = itemID;
+        this.title = title;
+        this.year = year;
+        this.author = author;
+        this.location = location;
+        this.ownedBy = ownedBy;
+        this.reserved = reserved;
+        this.reservedBy = new ArrayList<>(reservedBy);
     }
 
-    public void removeOwner() {
-    	ownedBy = "null";
-    }
-    
-    public String getOwner() {
-    	return ownedBy;
-    }
-    
-    public Boolean isOwner(String id) {
-        return ownedBy == id;
-    }
-    
-    public void setLoc(String id) {
-        location = id;
-    }
+    // Getters
+    public String getItemID() { return itemID; }
+    public String getTitle() { return title; }
+    public String getYear() { return year; }
+    public String getAuthor() { return author; }
+    public String getLocation() { return location; }
+    public String getOwnedBy() { return ownedBy; }
+    public int getReservedCount() { return reserved; }
+    public List<String> getReservedBy() { return new ArrayList<>(reservedBy); }
 
-    public void removeLoc() {
-    	location = null;
-    }
+    // Setters
+    public void setLocation(String location) { this.location = location; }
     
-    public String getLoc() {
-    	return location;
-    }
-    
-    public Boolean isAt(String id) {
-        return location == id;
-    }
-
-    // itemID,Title,Year,Author,Location,RenterID,int of reserved,reservedID's
-    public String toString() {
-        // Print out the information that always exists first according to the specified format
-        // Check if the reserved.size() is bigger than zero or not
-        // if it is print out a list of IDs of the members that are reserving this item
-        // if not just return temp
-        String temp = itemID + "," + title + "," + author + "," + location + "," + ownedBy + "," + reserved.size();
-        if(reserved.size() > 0) {
-            String tArray[] = (String[]) reserved.toArray();
-            for(int i = 0; i < reserved.size(); i++) {
-                String reserveID = "," + tArray[i];
-                temp = temp.concat(reserveID);
-            }
+    // Ownership management
+    public boolean setOwnedBy(String memberID) {
+        if (ownedBy == null || ownedBy.isEmpty()) {
+            ownedBy = memberID;
+            return true;
         }
+        return false;
+    }
+    
+    public boolean releaseOwnership() {
+        if (ownedBy != null && !ownedBy.isEmpty()) {
+            ownedBy = null;
+            return true;
+        }
+        return false;
+    }
 
-        return temp;
+    // Reservation management
+    public boolean addReservation(String memberID) {
+        if (!reservedBy.contains(memberID)) {
+            reservedBy.add(memberID);
+            reserved = reservedBy.size();
+            return true;
+        }
+        return false;
     }
     
-    public String getID() {
-        return itemID;
+    public boolean removeReservation(String memberID) {
+        boolean removed = reservedBy.remove(memberID);
+        if (removed) {
+            reserved = reservedBy.size();
+        }
+        return removed;
     }
-    
-    public String getTitle() {
-        return title;
+
+    // File format: itemID,Title,Year,Author,Location,ownedBy,reservedCount,reservedID1,reservedID2,...
+    public String toFileFormat() {
+        return String.format("%s,%s,%s,%s,%s,%s,%d,%s",
+            itemID, title, year, author, location, 
+            ownedBy != null ? ownedBy : "null",
+            reserved,
+            String.join(",", reservedBy));
     }
-    
-    public String getYear() {
-        return year;
-    }
-    
-    public String getAuthor() {
-        return author;
+
+    @Override
+    public String toString() {
+        return String.format("ID: %s | Title: %s | Author: %s | Location: %s | %s | Reservations: %d",
+            itemID, title, author, location,
+            ownedBy != null ? "Checked out by: " + ownedBy : "Available",
+            reserved);
     }
 }

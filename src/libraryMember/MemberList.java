@@ -1,192 +1,147 @@
 package libraryMember;
 
-import java.io.*;
-import java.util.Scanner;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
+//implements a facade design pattern
+//allow us to access the features of Member and StaffMember
 public class MemberList {
-	private int numMembers;
-	private Member[] mArray;
-	private String sourceName = "memberList.txt";
-	private boolean modified = false;
-	
-	
-	public MemberList() {
-		numMembers = 0;
-		mArray = new Member[200];
-	}
-	
-	public void setFilename(String filename) {
-		sourceName = filename;
-	}
-	
-	public String toString() {
-		String list = "";
-		
-		for(int i = 0; i < numMembers; i++) {
-			String temp = mArray[i].getName() + " " + mArray[i].getUserID()
-		                  + mArray[i].getStrikes() + " " + mArray[i].getAccountHold() + mArray[i].getBannedStatus() + "\n";
-			list = list.concat(temp);
-		}
-		
-		return list;
-	}
-	
-	/*
-	public Object attemptLogin(String u, String p) {
-		System.out.println(u + " " + p);
-		Member m = searchMember(u);
-		if(m != null) {
-			if(m.getPassword().equals(p)) {
-				return m;
-			}
-			return null;
-		}
-		
-		return 1;
-	}*/
-	
-	public void addMember(Object obj) {
-	    Member newMember = null;
+	private List<Member> members;
+    private List<StaffMember> staffMembers;
+    private static final String MEMBERS_FILE = "members.txt";
+    private static final String STAFF_FILE = "staffmembers.txt";
 
-	    // Determine the input type
-	    if (obj instanceof String) {
-	        newMember = new Member((String) obj);
-	    } else if (obj instanceof Member) {
-	        newMember = (Member) obj;
-	    } else {
-	        System.out.println("Invalid type passed to addMember.");
-	        return;
-	    }
+    public MemberList() {
+        this.members = new ArrayList<>();
+        this.staffMembers = new ArrayList<>();
+        loadAll();
+    }
 
-	    // Resize array if needed
-	    if (numMembers == mArray.length) {
-	        Member[] temp = new Member[numMembers * 2];
-	        for (int i = 0; i < numMembers; i++) {
-	            temp[i] = mArray[i];
-	        }
-	        mArray = temp;
-	    }
+    //Loading and saving-----------------------------------------------
+    public void loadAll() {
+        try {
+            this.members = Member.loadAllMembers();
+            this.staffMembers = StaffMember.loadAllStaff();
+            System.out.println(members.toString() + "," + staffMembers.toString());
+        } catch (IOException e) {
+            System.err.println("Error loading members: " + e.getMessage());
+        }
+    }
 
-	    // Find insert position based on first name
-	    int insertPos = 0;
-	    while (insertPos < numMembers && mArray[insertPos].getUserID().compareToIgnoreCase(newMember.getName()) < 0) {
-	        insertPos++;
-	    }
+    public void saveAll() {
+        try {
+            Member.saveAllMembers(members);
+            StaffMember.saveAllStaff(staffMembers);
+        } catch (IOException e) {
+            System.err.println("Error saving members: " + e.getMessage());
+        }
+    }
 
-	    // Shift elements to the right to make room
-	    for (int i = numMembers; i > insertPos; i--) {
-	        mArray[i] = mArray[i - 1];
-	    }
+    //Member Management-----------------------------------------------
+    public String addMember(String name) {
+        String newId = generateMemberId();
+        Member newMember = new Member(newId, name, 0, false, false);
+        members.add(newMember);
+        saveAll();
+        return newId;
+    }
 
-	    // Insert new member
-	    mArray[insertPos] = newMember;
-	    numMembers++;
-	    
-	    setModified(true);
-	    saveList();
-	}
-	
-	public int getNumMembers() {
-		return numMembers;
-	}
-	
-	public Member searchMember(String memberId) {
-	    int low = 0;
-	    int high = numMembers - 1;
+    public boolean removeMember(String memberId) {
+        boolean removed = members.removeIf(m -> m.getMemberID().equals(memberId));
+        if (removed) saveAll();
+        return removed;
+    }
 
-	    while (low <= high) {
-	        int mid = (low + high) / 2;
-	        int cmp = mArray[mid].getUserID().compareTo(memberId);
+    public Member getMember(String memberId) {
+        return members.stream()
+            .filter(m -> m.getMemberID().equals(memberId))
+            .findFirst()
+            .orElse(null);
+    }
 
-	        if (cmp == 0) {
-	            return mArray[mid]; // Match found
-	        } else if (cmp < 0) {
-	            low = mid + 1; // Search right half
-	        } else {
-	            high = mid - 1; // Search left half
-	        }
-	    }
+    //Staff Member Management-----------------------------------------
+    public String addStaffMember(String name, String location) {
+        String newId = generateStaffId();
+        StaffMember newStaff = new StaffMember(
+            newId, name, 0, false, false, 
+            location, StaffMember.generatePassword()
+        );
+        staffMembers.add(newStaff);
+        saveAll();
+        return newId;
+    }
 
-	    return null; // Not found
-	}
+    public boolean removeStaffMember(String staffId) {
+        boolean removed = staffMembers.removeIf(s -> s.getMemberID().equals(staffId));
+        if (removed) saveAll();
+        return removed;
+    }
 
-	
-	public Member getIndex(int i) {
-		return mArray[i];
-	}
-	
-	public void saveList() {
-	    if (!modified) {
-	        return;
-	    }
-	    
-	    System.out.println("Saving List");
+    public StaffMember getStaffMember(String staffId) {
+        return staffMembers.stream()
+            .filter(s -> s.getMemberID().equals(staffId))
+            .findFirst()
+            .orElse(null);
+    }
 
-	    File file = new File(sourceName);
+    //Search Operation-------------------------------------------------
+    public boolean searchAllMembers(String id) {
+        return getMember(id) != null || getStaffMember(id) != null;
+    }
 
-	    try {
-	        // Ensure the file exists
-	        if (!file.exists()) {
-	        	System.out.println("file exists");
-	            file.createNewFile();  // Create the file if it doesn't exist
-	        }
+    public List<Member> searchByName(String name) {
+        List<Member> results = new ArrayList<>();
+        results.addAll(members.stream()
+            .filter(m -> m.getName().toLowerCase().contains(name.toLowerCase()))
+            .collect(Collectors.toList()));
+        results.addAll(staffMembers.stream()
+            .filter(s -> s.getName().toLowerCase().contains(name.toLowerCase()))
+            .collect(Collectors.toList()));
+        return results;
+    }
 
-	        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-	            for (int i = 0; i < numMembers; i++) {
-	                String line = mArray[i].toString();
-	                writer.write(line);
-	                writer.newLine();  // Adds a newline after each entry
-	            }
-	            modified = false;
-	        }
-	    } catch (IOException e) {
-	        System.out.println("Error saving member list: " + e.getMessage());
-	    }
-	}
+    //ID Creation----------------------------------------------------
+    private String generateMemberId() {
+        return "MEM" + (members.size() + 1000);
+    }
 
-	
-	public void setModified(boolean m) {
-		modified = m;
-	}
-	
+    private String generateStaffId() {
+        return "STAFF" + (staffMembers.size() + 100);
+    }
 
-	public void loadList() {
-	    File file = new File(sourceName);
-	    
-	    try {
-	        if (!file.exists()) {
-	            file.createNewFile();
-	            // No data to load, but file now exists
-	            return;
-	        }
-	    } catch (IOException e) {
-	        System.out.println("Error creating file: " + e.getMessage());
-	        return;
-	    }
+    //Getters-----------------------------------------------------------
+    public List<Member> getAllMembers() {
+        return new ArrayList<>(members);
+    }
 
-	    try (Scanner scanner = new Scanner(file)) {
-	        scanner.useDelimiter(",|\n");
-
-	        while (scanner.hasNext()) {
-	            String name = scanner.next();
-	            String userID = scanner.next();
-	            String userPassword = scanner.next();
-	            String strikes = scanner.next();
-	            String accountHold = scanner.next();
-				// Convert string "true" or "false" into a boolean value
-				// Evaluates to true only if it matches exactly true (ignore case), everything else will
-				// evaluate as false
-				Boolean bannedStatus = Boolean.valueOf(scanner.next());
-
-	            Member temp = new Member(name, userID, userPassword, strikes, accountHold, bannedStatus);
-				// Add into the list of member arrays and increment
-	            mArray[numMembers++] = temp;
-	        }
-
-	        modified = false;
-	    } catch (Exception e) {
-	        System.out.println("Error reading file of memberList: " + e.getMessage());
-	    }
-	}
-
+    public List<StaffMember> getAllStaffMembers() {
+        return new ArrayList<>(staffMembers);
+    }
+    
+    //ID getters
+    public Member getMemberByID(String id) {
+        for (Member m : members) {
+            if (m.getMemberID().equals(id)) {
+                return m;
+            }
+        }
+        for (StaffMember s : staffMembers) {
+            if (s.getMemberID().equals(id)) {
+                return s;
+            }
+        }
+        return null;
+    }
+    
+    //Authentication
+    public Member authenticate(String id, String password) {
+        for (StaffMember s : staffMembers) {
+            if (s.getMemberID().equals(id) && s.getPassword().equals(password)) {
+                return s;
+            }
+        }
+        return null;
+    }
 }

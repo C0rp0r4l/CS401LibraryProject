@@ -1,249 +1,168 @@
 package libraryMember;
+
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Scanner;
+import java.util.List;
+import java.io.Serializable;
 
 public class ItemList implements Serializable{
 	private static final long serialVersionUID = 1L;
-	private Integer numItems;
-    private Item[] iArray;
-    private String sourceName = "masterItemList";
-    
+    private List<Item> items;
+    private static final String ITEM_FILE = "masterItemList.txt";
+
     public ItemList() {
-        numItems = 0;
-        iArray = new Item[1000];
+        items = new ArrayList<>();
+        loadItems();
     }
     
-    public String toString() {
-        String list = "";
-        for(int i = 0; i < numItems; i++) {
-            String temp = iArray[i].toString() + "\n";
-            list = list.concat(temp);
-        }
-        return list;
-    }
-    
-    public String sourcename() {
-    	return sourceName;
+    public ItemList(Boolean bool) {
+        items = new ArrayList<>();
+    	if(bool) {
+    		loadItems();
+    	}
     }
 
-    public Boolean addOwner(String memberID, String itemID) {
-        try {
-        	System.out.println(itemID);
-            Item item = getItemFromID(itemID);
-        	System.out.println(item);
-            item.setOwner(memberID);
-        	System.out.println(item.getOwner() + " Owns " + item);
-            save();
-            return true; // success
-        } catch (Exception e) {
-            return false; // something went wrong
-        }
-     }
-
-    public Boolean removeOwner(String itemID) {
-            try {
-                Item item = getItemFromID(itemID);
-                item.removeOwner();
-                save();
-                return true; // success
-            } catch (Exception e) {
-                return false; // something went wrong
-            }
-    }
-    
-    public Boolean addLoc(String locID, String itemID) {
-            try {
-                Item item = getItemFromID(itemID);
-                item.setLoc(locID);
-                save();
-                return true; // success
-            } catch (Exception e) {
-                return false; // something went wrong
-            }
-        }
-
-    public Boolean removeLoc(String itemID) {
-            try {
-                Item item = getItemFromID(itemID);
-                item.removeLoc();
-                save();
-                return true; // success
-            } catch (Exception e) {
-                return false; // something went wrong
-            }
-        }
-    
-    public Boolean handleReservation(String itemID, String memberID) {
-            try {
-                Item item = getItemFromID(itemID);
-                item.handleReservation(memberID);
-                save();
-                return true; // success
-            } catch (Exception e) {
-                return false; // something went wrong
-            }
-        }
-    
-	//NEW FUNCTION ADDED BY JORDAN
-	public ItemList getItemsFromTitle(String title) {
-		ItemList items = new ItemList();
-		for(int i = 0; i < numItems; i++) {
-			if(iArray[i].getTitle().compareTo(title) == 0) {
-				items.addItem(iArray[i]);
-			}
-		}
-		if(items.getNumItems() > 0) {
-			return items;
-		}
-		else return null;
-	}
-	
-	public Item getItemFromID(String id) {
-		for(int i = 0; i < numItems; i++) {
-			if(iArray[i].getID().compareTo(id) == 0) {
-				return iArray[i];
-			}
-		}
-		return null;
-	}
-    
-    public void addItem(String t, String y, String a) {
-        Item temp = new Item(t, y, a);
+    //Loading and Saving----------------------------------------------------------------------
+    public void loadItems() {
+        items.clear();
+        File file = new File(ITEM_FILE);
         
-        if(numItems == iArray.length) {
-            Item[] newArray = new Item[numItems *2];
-            for(int i = 0; i < (numItems*2); i++) {
-                newArray[i] = iArray[i];
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                System.err.println("Error creating item file: " + e.getMessage());
             }
-            iArray = newArray;
+            return;
         }
-        iArray[numItems] = temp;
-    	System.out.println("Added " + iArray[numItems] + " to Array");
-        numItems++;
 
-        save();
-    }
-    
-    //NEW FUNCTION FROM JORDAN ADD ITEM BY ITEM
-    public void addItem(Item item) {
-        
-        if(numItems == iArray.length) {
-            Item[] newArray = new Item[numItems *2];
-            for(int i = 0; i < (numItems*2); i++) {
-                newArray[i] = iArray[i];
-            }
-            iArray = newArray;
-        }
-        iArray[numItems] = item;
-        numItems++;
-
-    }
-
-    
-    public int getNumItems() {
-        return numItems;
-    }
-
-    public Item[] getIArray() {
-        return Arrays.copyOf(iArray, numItems); // Safe copy
-    }
-    
-    public void removeItem(String id) {
-        for(int i = 0; i < numItems; i++) {
-            if(iArray[i].getID().compareTo(id) == 0) {
-                iArray[i] = iArray[numItems];
-                numItems--;
-            }
-        }
-    }
-    
-    public String getTitle(String bookID) {
-        for(int i = 0; i < numItems; i++) {
-            if(iArray[i].getID().compareTo(bookID) == 0) {
-                return iArray[i].getTitle();
-            }
-        }
-        return "Book not found";
-    }
-
-    public String getYear(String bookID) {
-        for(int i = 0; i < numItems; i++) {
-            if(iArray[i].getID().compareTo(bookID) == 0) {
-                return iArray[i].getYear();
-            }
-        }
-        return "Book not found";
-    }
-    
-    public String getAuthor(String bookID) {
-        for(int i = 0; i < numItems; i++) {
-            if(iArray[i].getID().compareTo(bookID) == 0) {
-                return iArray[i].getAuthor();
-            }
-        }
-        return "Book not found";
-    }
-
-    public void save() {
-        try {
-            FileWriter out = new FileWriter(sourceName);
-            
-            for(int i = 0; i < numItems; i++) {
-            	System.out.println(iArray[i].toString());
-                out.write(iArray[i].toString() + "\n");
-            }
-            
-            out.close();
-            
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
-    public boolean load() {
-        File file = new File(sourceName);
-        try {
-            if(file.createNewFile()) {
-                return false;
-            }
-            
-            Scanner scanner = new Scanner(file);
-            scanner.useDelimiter(",|\n");
-            
-            while(scanner.hasNext()) {
-                String id = scanner.next();
-                String title = scanner.next();
-                String year = scanner.next();
-                String author = scanner.next();
-                String loc = scanner.next();
-                String own = scanner.next();
-                // Cast the string "0" or "1" into an integer
-                Integer reserveCount = Integer.valueOf(scanner.next());
-                // Create a temporary list containing all the ids of the members reserving a specific item
-                ArrayList<String> temp = new ArrayList<String>();
-
-                // Loop through the list of ids, add it into the ArrayList temp
-                for(int i = 0; i < reserveCount; i++) {
-                    String reserveID = scanner.next();
-                    temp.add(reserveID);
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 7) {
+                    String itemID = parts[0].trim();
+                    String title = parts[1].trim();
+                    String year = parts[2].trim();
+                    String author = parts[3].trim();
+                    String location = parts[4].trim();
+                    String ownedBy = parts[5].trim().equals("null") ? null : parts[5].trim();
+                    int reserved = Integer.parseInt(parts[6].trim());
+                    
+                    List<String> reservedBy = new ArrayList<>();
+                    for (int i = 7; i < parts.length; i++) {
+                        reservedBy.add(parts[i].trim());
+                    }
+                    
+                    items.add(new Item(itemID, title, year, author, location, 
+                                     ownedBy, reserved, reservedBy));
                 }
-
-                // Create an item using the constructor specifically for saving and loading 
-                Item loadItem = new Item(id, title, year, author, loc, own, temp);
-                
-                // Add the item into the itemList
-                addItem(loadItem);
             }
-            
-            scanner.close();
-            return true;
+        } catch (IOException e) {
+            System.err.println("Error loading items: " + e.getMessage());
         }
-        catch (Exception e) {
-            System.out.println("Error reading file");
+    }
+
+    public void saveItems() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(ITEM_FILE))) {
+            for (Item item : items) {
+                writer.write(item.toFileFormat() + "\n");
+            }
+        } catch (IOException e) {
+            System.err.println("Error saving items: " + e.getMessage());
+        }
+    }
+
+    //Item management------------------------------------------------------------------------
+    public String addItem(String title, String year, String author, String location) {
+        String newId = generateItemId(title, year, author);
+        Item newItem = new Item(newId, title, year, author, location, null, 0, new ArrayList<>());
+        items.add(newItem);
+        saveItems();
+        return newId;
+    }
+    public void add(Item i) {
+    	items.add(i);
+    }
+
+    public boolean removeItem(String itemId) {
+        boolean removed = items.removeIf(item -> item.getItemID().equals(itemId));
+        if (removed) saveItems();
+        return removed;
+    }
+
+    //Item Accessing---------------------------------------------------------
+    public Item getItem(String itemId) {
+        return items.stream()
+            .filter(item -> item.getItemID().equals(itemId))
+            .findFirst()
+            .orElse(null);
+    }
+
+    public List<Item> searchByTitle(String title) {
+        List<Item> results = new ArrayList<>();
+        results.clear();
+        for (Item item : items) {
+        	System.out.println(item.getTitle() + "," + title);
+        	if (item.getTitle().equalsIgnoreCase(title) == true) {
+        	    results.add(item);
+            	System.out.println(results.toString());
+        	}
+        }
+        return results;
+    }
+
+    //Checkout/Reserve Items-----------------------------------------
+    public boolean checkoutItem(String itemId, String memberId) {
+        Item item = getItem(itemId);
+        if (item != null && item.getOwnedBy() == null) {
+            boolean success = item.setOwnedBy(memberId);
+            if (success) saveItems();
+            return success;
         }
         return false;
+    }
+
+    public boolean returnItem(String itemId) {
+        Item item = getItem(itemId);
+        if (item != null && item.getOwnedBy() != null) {
+            boolean success = item.releaseOwnership();
+            if (success) saveItems();
+            return success;
+        }
+        return false;
+    }
+
+    public boolean reserveItem(String itemId, String memberId) {
+        Item item = getItem(itemId);
+        if (item != null) {
+            boolean success = item.addReservation(memberId);
+            if (success) saveItems();
+            return success;
+        }
+        return false;
+    }
+
+    public boolean cancelReservation(String itemId, String memberId) {
+        Item item = getItem(itemId);
+        if (item != null) {
+            boolean success = item.removeReservation(memberId);
+            if (success) saveItems();
+            return success;
+        }
+        return false;
+    }
+
+    //ID Creation--------------------------------------------------------
+    private String generateItemId(String title, String year, String author) {
+        String prefix = title.substring(0, Math.min(3, title.length())) + 
+                      year.substring(Math.max(0, year.length()-2)) + 
+                      author.substring(0, Math.min(2, author.length()));
+        return prefix + (items.size() + 1000);
+    }
+    
+    //Get All Items--------------------------------------------------------
+    public List<Item> getAllItems() {
+        return new ArrayList<>(items);
     }
 }

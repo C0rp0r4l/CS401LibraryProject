@@ -1,177 +1,122 @@
 package libraryMember;
 
 import java.io.File;
-import java.io.Serializable;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.List;
 import java.util.Scanner;
 
-public class Location implements Serializable {
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-	private String locationName;
-    private static ItemList rentalItemList;
-    private static ItemList reserveItemList;
-    private static ItemList locationInventory;
-    private static StaffMemberList locationStaff;
+public class Location {
+    //variables
+    private List<String> locations;
+    private String source = "locationlist.txt";
+    private boolean modified = false;
     
-    // Constructor for new location
-    public Location(String name) {
-        this.locationName = name;
-        this.locationInventory = new ItemList(itemListType.Library, name);
-        this.reserveItemList = new ItemList(itemListType.Reservation, name);
-        this.rentalItemList = new ItemList(itemListType.Rental, name);
-        this.locationStaff = new StaffMemberList(name);
-
-        locationInventory.load();
-        reserveItemList.load();
-        rentalItemList.load();
-        locationStaff.loadList();
-    }
-    
-    public Location(String n, String locList, String resList, String rentList, String staffList) {
-        this.locationName = n;
-        this.locationInventory = new ItemList(locList, itemListType.Library);
-        this.reserveItemList = new ItemList(resList, itemListType.Reservation);
-        this.rentalItemList = new ItemList(rentList, itemListType.Rental);
-        this.locationStaff = new StaffMemberList(staffList);
-
-        locationInventory.load();
-        reserveItemList.load();
-        rentalItemList.load();
-        locationStaff.loadList();
+    //methods
+    //constructor
+    public Location() {
+        locations = new ArrayList<>();
+        load();
     }
 
-    // Getters
-    public String getLocationName() {
-    	System.out.println(locationName);
-        return locationName;
+    //LOADS LOCATIONS FROM THE TEXT FILE
+    public void load() {
+        locations.clear();
+        try {
+            File file = new File(source);
+            if (!file.exists()) {
+                file.createNewFile();
+                return;
+            }
+
+            try (Scanner scanner = new Scanner(file)) {
+                while (scanner.hasNextLine()) {
+                    String location = scanner.nextLine().trim();
+                    if (!location.isEmpty()) {
+                        locations.add(location);
+                    }
+                }
+            }
+            modified = false;
+        } catch (IOException e) {
+            System.err.println("Error loading locations: " + e.getMessage());
+        }
     }
+
+
     
-    public ItemList getInventory() {
-        return locationInventory;
+    //SAVES LOCATIONS TO THE TEXT FILE IF MODIFICATIONS WERE MADE 
+    public void save() {
+        if (!modified) return;
+
+        try (FileWriter writer = new FileWriter(source)) {
+            for (String location : locations) {
+                writer.write(location + "\n");
+            }
+            modified = false;
+        } catch (IOException e) {
+            System.err.println("Error saving locations: " + e.getMessage());
+        }
     }
+
     
-    public StaffMemberList getStaffMembers() {
-        return locationStaff;
-    }
-    
-    // Inventory Management Methods
-    public void addItem(String title, String year, String author) {
-    	locationInventory.addItem(title, year, author);
-    	locationInventory.save();
-    }
-    
-    public void removeItem(String itemID) {
-    	locationInventory.removeItem(itemID);
-    	locationInventory.save();
-    }
-    
-    public boolean transferItem(String itemID, Location destination) {
-        if (locationInventory.getTitle(itemID).equals("Book not found")) {
+    //ADDS A NEW LOCATION TO THE LIST
+    //return true if added successfully, false if location already exists 
+    public boolean addLocation(String locationName) {
+        if (locationName == null || locationName.trim().isEmpty()) {
             return false;
         }
         
-        String title = locationInventory.getTitle(itemID);
-        String year = locationInventory.getYear(itemID);
-        String author = locationInventory.getAuthor(itemID);
-        int quantity = 1;
-        
-        destination.addItem(title, year, author);
-        locationInventory.removeItem(itemID);
-        
-        locationInventory.save();
-        destination.getInventory().save();
-        
-        return true;
-    }
-    
-    // Staff Management
-    public void addStaffMember(String name) {
-        locationStaff.addMember(name);
-        locationStaff.saveList();
-    }
-    
-    public void addStaffMember(StaffMember s) {
-        locationStaff.addMember(s);
-        locationStaff.saveList();
-    }
-    
-    public boolean removeStaffMember(String userID) {
-        StaffMember staff = (StaffMember) locationStaff.searchMember(userID);
-        if (staff != null) {
-            locationStaff.removeMember(userID);
-            locationStaff.saveList();
+        String trimmedName = locationName.trim();
+        if (!locations.contains(trimmedName)) {
+            locations.add(trimmedName);
+            modified = true;
             return true;
         }
         return false;
     }
-    
-    public boolean transferStaff(String userID, Location destination) {
-        StaffMember staff = (StaffMember) locationStaff.searchMember(userID);
-        if (staff != null) {
-            destination.getStaffMembers().addMember(staff.getName());
-            locationStaff.removeMember(userID);
-            locationStaff.saveList();
-            destination.getStaffMembers().saveList();
-            return true;
+
+    //REMOVES A LOCATION FROM THE LIST
+    //return true if removed successfully, false if location wasn't found
+    public boolean removeLocation(String locationName) {
+        if (locationName == null) {
+            return false;
         }
-        return false;
-    }
-    
-    // Sorting Methods
-    private void sortItems(Comparator<Item> comparator) {
-    	Item[] items = locationInventory.getIArray();
-        int numItems = locationInventory.getNumItems();
         
-        // Simple bubble sort implementation
-        for (int i = 0; i < numItems - 1; i++) {
-            for (int j = 0; j < numItems - i - 1; j++) {
-                if (comparator.compare(items[j], items[j + 1]) > 0) {
-                    // Swap items
-                    Item temp = items[j];
-                    items[j] = items[j + 1];
-                    items[j + 1] = temp;
-                }
-            }
+        boolean removed = locations.remove(locationName.trim());
+        if (removed) {
+            modified = true;
         }
-        locationInventory.save();
+        return removed;
     }
     
-    public void sortByTitle() {
-        sortItems(Comparator.comparing(Item::getTitle));
+    //CHECK IF A LOCATION EXISTS IN THE LIST
+    public boolean contains(String locationName) {
+        return locations.contains(locationName.trim());
     }
-    
-    public void sortByAuthor() {
-        sortItems(Comparator.comparing(Item::getAuthor));
+
+    //RETURN LIST OF ALL LOCATION NAMES
+    public List<String> getAllLocations() {
+        return new ArrayList<>(locations); // Return a copy to prevent external modification
     }
-    
-    public void sortByYear() {
-        sortItems(Comparator.comparing(Item::getYear));
+
+    //GETS THE NUMBER OF LOCATIONS
+    public int size() {
+        return locations.size();
     }
-    
-    public void sortByTitleThenAuthor() {
-        sortItems(Comparator.comparing(Item::getTitle)
-                  .thenComparing(Item::getAuthor));
+
+    //CLEARS ALL LOCATIONS FROM THE LIST
+    public void clear() {
+        if (!locations.isEmpty()) {
+            locations.clear();
+            modified = true;
+        }
     }
-    
+
+    @Override
     public String toString() {
-        return locationName + "," + rentalItemList.sourcename() + "," + reserveItemList.sourcename() + "," + locationInventory.sourcename() + "," + locationStaff.sourcename();
-    }
-    
-    public String displaySortedInventory() {
-        StringBuilder sb = new StringBuilder();
-        Item[] items = locationInventory.getIArray();
-        int numItems = locationInventory.getNumItems();
-        
-        for (int i = 0; i < numItems; i++) {
-            Item item = items[i];
-            sb.append(String.format("%s by %s (%s)\n", 
-                item.getTitle(), item.getAuthor(), item.getYear()));
-        }
-        return sb.toString();
+        return String.join("\n", locations);
     }
     
 }

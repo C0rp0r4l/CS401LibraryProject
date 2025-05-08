@@ -11,24 +11,24 @@ public enum Header {
     GET,        // Get - String ItemID (Get item associated to itemID)
     DATA,       // Data - Item ItemA (Passing of ItemA)
 
+    MAKESTAFF,  // MakeStaff - To make this user a staff member
     // Account Management
     ACCT,
     LOGIN,
     LOGOUT,
-    CREATE,     // Create - Member MemberA (Create Member with message object)
-    DELETE,     // Delete - String AccountID (Delete Member assoc. with ID)
-    STATUS,     // Status - Member MemberA Status Status (Set status of MemberA to status)
-    MAKESTAFF,  //MakeStaff - String MemberID (Make Member assoc with MemberID into a StaffMember)
-    //EDIT,     // Edit - Member MemberA (Replace Member with MemberA, which is a new Member object with changes implemented)
-    // GET		// Get - String MemberID (Get Member associated to MemberID)
-    // DATA		// Data - Member MemberA (Passing of MemberA)
+    CREATE,     // Create - Account AccountA (Create account with message object)
+    DELETE,     // Delete - String AccountID (Delete Account assoc. with ID)
+    STATUS,     // Status - Account Account A Status Status (Set status of accountA to status)
+    //EDIT,     // Edit - Account AccountA (Replace account with AccountA, which is a new Account object with changes implemented)
+    // GET already defined above (reuse GET)
+    // DATA already defined above (reuse DATA)
 
     // Location Management
     LOC,
-    // CREATE   //String name (Create a location with name name)
-    // ADD		//String StaffMemberID (Add staff to Location)
-    // GET		// Get - String LocationID (Get item associated to LocationID)
-    // DATA		// Data - Location (Passing of ItemA)
+    // CREATE already defined above (reuse CREATE)
+    // ADD already defined above (reuse ADD)
+    // GET already defined above (reuse GET)
+    // DATA already defined above (reuse DATA)
 
     // Item Attainment
     ITEM,

@@ -1,90 +1,98 @@
 package libraryMember;
 
-import java.util.Random;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.io.Serializable;
 
 public class Member implements Serializable {
 	private static final long serialVersionUID = 1L;
-	//variables
-	private String userID;
-	boolean accountHold = false;
-	private String name;
-	private int strikes;
-	boolean accountBanned = false;
+    private String memberID;
+    private String name;
+    private int strikes;
+    private boolean accountHold;
+    private boolean accountBanned;
+    private static final String MEMBERS_FILE = "members.txt";
 
-	
-	//methods
-	//constructor
-	public Member(String name) {
-		//take first 3 characters of new members name, or use the whole thing if less than 3 characters
-		String namePrefix = name.length() >= 3 ? name.substring(0, 3) : name;
-		//now generate 3 random digits
-		Random rand = new Random();
-		//gives a random number between 100 and 999
-		int randomDigits = rand.nextInt(900) + 100;
-		//now append the random digits onto the name prefix for our new userID
-		this.userID = namePrefix + randomDigits;
-		//now construct the rest of the variables
+    public Member(String memberID, String name, int strikes, boolean accountHold, boolean accountBanned) {
+        this.memberID = memberID;
+        this.name = name;
+        this.strikes = strikes;
+        this.accountHold = accountHold;
+        this.accountBanned = accountBanned;
+        checkBanStatus();
+    }
 
-		this.name = name;
-		this.strikes = 0;
+    // Getters and Setters
+    public String getMemberID() { return memberID; }
+    public String getName() { return name; }
+    public int getStrikes() { return strikes; }
+    public boolean isAccountHold() { return accountHold; }
+    public boolean isAccountBanned() { return accountBanned; }
 
-		//REMEMBER THE MAIN WAY TO FIND A MEMBER IS WITH THE USERID
-		System.out.println("New Member: " + this.userID);
-	}
-	
-	// Constructor ONLY for loading already existing members from a file since ID is randomly generated
-	// name, userID, strikes, accountHold, Banned
-	public Member(String n, String uID, String userPass, String s, String a, Boolean b) {
-		name = n;
-		userID = uID;
-		strikes = Integer.valueOf(s);
-		accountHold = Boolean.valueOf(a);
-		accountBanned = b;
-	}
-	
-	// get userID
-	public String getUserID() {
-	    return this.userID;
-	}
-	
-	public String getName() {
-		return name;
-	}
+    public void setName(String name) { this.name = name; }
+    public void setAccountHold(boolean hold) { this.accountHold = hold; }
 
-	public void addStrike() {
-		strikes++;
-	}
-	
-	// Returns a string with format Name,userID,Strikes,accountHold 
-	// Example: Ricky Ip,RIC412,0,false
-	public String toString() {
-		return (name + "," + userID + "," + String.valueOf(strikes) + "," + String.valueOf(accountHold) + "," + String.valueOf(accountBanned));
-	}
-	
-	// Returns the # of strikes as a string
-	public String getStrikes() {
-		return String.valueOf(strikes);
-	}
-	
-	// Returns true/false of the account hold as a string
-	public String getAccountHold() {
-		return String.valueOf(accountHold);
-	}
+    public void addStrike() {
+        strikes++;
+        checkBanStatus();
+    }
 
-	public String getBannedStatus() {
-		return String.valueOf(accountBanned);
-	}
-	
-	//set account hold status
-	//have client prompt user for 'T' or 'F' to set state
-	public void setAccountHold(String hold) {
-		if (hold.equalsIgnoreCase("t")) {
-			this.accountHold = true;
-			return;
-		}
-		else {
-			this.accountHold = false;
-		}
-	}
+    public void removeStrike() {
+        if (strikes > 0) strikes--;
+        checkBanStatus();
+    }
+
+    private void checkBanStatus() {
+        accountBanned = strikes >= 3;
+    }
+
+    // File operations
+    public static List<Member> loadAllMembers() throws IOException {
+        List<Member> members = new ArrayList<>();
+        File file = new File(MEMBERS_FILE);
+        
+        if (!file.exists()) {
+            file.createNewFile();
+            return members;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length == 5) {
+                    members.add(new Member(
+                        parts[0].trim(),
+                        parts[1].trim(),
+                        Integer.parseInt(parts[2].trim()),
+                        Boolean.parseBoolean(parts[3].trim()),
+                        Boolean.parseBoolean(parts[4].trim())
+                    ));
+                }
+            }
+        }
+        return members;
+    }
+
+    public static void saveAllMembers(List<Member> members) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(MEMBERS_FILE))) {
+            for (Member member : members) {
+                writer.write(String.format("%s,%s,%d,%b,%b\n",
+                    member.memberID,
+                    member.name,
+                    member.strikes,
+                    member.accountHold,
+                    member.accountBanned
+                ));
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s,%s,%d,%b,%b",
+            memberID, name, strikes, accountHold, accountBanned);
+    }
 }

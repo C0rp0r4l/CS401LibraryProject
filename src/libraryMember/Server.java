@@ -2,38 +2,54 @@ package libraryMember;
 
 import java.io.*;
 import java.net.*;
+import java.util.List;
 
-// Server class
-class Server {
-	
+public class Server {
+    
     private static MemberList memberList = new MemberList();
-    private static ItemList itemList = new ItemList(itemListType.Library, "");
-    private static StaffMemberList staffList = new StaffMemberList("");
-    private static LocationList locationList = new LocationList();
+    private static ItemList itemList = new ItemList();
+    private static Location locationList = new Location();
     
     public static void main(String[] args) {
         ServerSocket server = null;
 
         try {
-            // Server is listening on port 7777
+            System.out.println("Starting server");
             server = new ServerSocket(7777);
             server.setReuseAddress(true);
-            
-            locationList.load();
-            memberList.loadList();
-            
-            itemList.load();
-            staffList.loadList();
-            System.out.println(staffList.toString());
+            System.out.println("Server socket opened on port 7777");
+
+            try {
+                locationList.load();
+                System.out.println("Location list loaded successfully");
+            } catch (Exception e) {
+                System.err.println("Failed to load location list:");
+                e.printStackTrace();
+            }
+
+            try {
+                itemList.loadItems();
+                System.out.println("Item list loaded successfully");
+            } catch (Exception e) {
+                System.err.println("Failed to load item list:");
+                e.printStackTrace();
+            }
+
+            try {
+                memberList.loadAll();
+                System.out.println("Member list loaded successfully");
+            } catch (Exception e) {
+                System.err.println("Failed to load member list:");
+                e.printStackTrace();
+            }
+
+            System.out.println("System fully initialized. Waiting for clients to connect to the server!");
 
             // Running infinite loop for getting client requests
             while (true) {
                 // Socket object to receive incoming client requests
                 Socket client = server.accept();
-
-                // Displaying that a new client is connected to the server
-                System.out.println("New client connected"
-                        + client.getInetAddress().getHostAddress());
+                System.out.println("New client connected: " + client.getInetAddress().getHostAddress());
 
                 // Create a new thread object to handle the client separately
                 ClientHandler clientSock = new ClientHandler(client, memberList);
@@ -41,13 +57,16 @@ class Server {
                 // Start the client handler thread
                 new Thread(clientSock).start();
             }
+
         } catch (IOException e) {
+            System.err.println("Server crashed with IOException:");
             e.printStackTrace();
         } finally {
             if (server != null) {
                 try {
                     server.close();
                 } catch (IOException e) {
+                    System.err.println("Failed to close server socket:");
                     e.printStackTrace();
                 }
             }
@@ -80,371 +99,375 @@ class Server {
                 Message requestLoginMessage = new Message(
                     Header.ACCT,
                     Header.GET,
-                    "Please provide login credentials",  // data indicating the request for login
+                    "Please provide login credentials",
                     "server",
                     "client",
                     "client",
                     "server"
                 );
                 out.writeObject(requestLoginMessage);
-                out.flush();  // Ensure the message is sent immediately
+                out.flush();
                 System.out.println("Sent login request to client.");
                 
-                        while (true) {
-                        	if (clientSocket.getInputStream().available() > 0) {
-                        	    Object obj = in.readObject();
-                        	    if (!(obj instanceof Message)) {
-                        	        System.out.println("Received unknown object type");
-                        	        return;
-                        	    }
-                            Message msg = (Message) obj;
-                            System.out.println("Recieved Message " + msg.getPrimaryHeader());
-                            Message response;
-
-                            // Primary header switch (INV, ACC, LOC, ITEM, NET)
-                            switch (msg.getPrimaryHeader()) {
-                                case Header.INV:
-                                    // Handle Inventory-related actions
-                                    response = handleInventoryActions(msg);
-                                    out.writeObject(response);
-                                    break;
-
-                                case Header.ACCT:
-                                    // Account Management-specific actions (Create, Delete, Status, Edit, Get, Data)
-                                    response = handleAccountActions(msg);
-                                    out.writeObject(response);
-                                    break;
-
-                                case Header.LOC:
-                                    // Handle Location-related actions
-                                    response = handleLocationActions(msg);
-                                    out.writeObject(response);
-                                    break;
-
-                                case Header.ITEM:
-                                    // Handle Item Attention-related actions
-                                    response = handleItemActions(msg);
-                                    out.writeObject(response);
-                                    break;
-
-                                case Header.NET:
-                                    // Handle Network-related actions
-                                    response = handleNetworkActions(msg);
-                                    out.writeObject(response);
-                                    break;
-
-                                default:
-                                    System.out.println("Unknown primary header received.");
-                                    response = new Message(Header.NET, Header.ERR, "Unknown request", "server", "client", "server", "client");
-                                    out.writeObject(response);
-                                    break;
-                            }
-                        	} else {
-                        	    try {
-                        	        Thread.sleep(100); // reduce CPU usage
-                        	    } catch (InterruptedException e) {
-                        	        Thread.currentThread().interrupt();
-                        	    }
-                        	}
+                while (true) {
+                    if (clientSocket.getInputStream().available() > 0) {
+                        Object obj = in.readObject();
+                        if (!(obj instanceof Message)) {
+                            System.out.println("Received unknown object type");
+                            continue;
                         }
-                    } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
-                    } finally {
+                        
+                        Message msg = (Message) obj;
+                        System.out.println("Received Message " + msg.getPrimaryHeader());
+                        Message response;
+
+                        // Process the message based on its primary header
+                        switch (msg.getPrimaryHeader()) {
+                            case Header.INV:
+                                response = handleInventoryActions(msg);
+                                break;
+                            case Header.ACCT:
+                                response = handleAccountActions(msg);
+                                break;
+                            case Header.LOC:
+                                response = handleLocationActions(msg);
+                                break;
+                            case Header.ITEM:
+                                response = handleItemActions(msg);
+                                break;
+                            default:
+                                System.out.println("Unknown primary header received.");
+                                response = new Message(Header.NET, Header.ERR, "Unknown request", "server", "client", "client", "server");
+                        }
+                        
+                        out.writeObject(response);
+                        out.flush();
+                    } else {
                         try {
-                            clientSocket.close();
-                            System.out.println("Connection closed.");
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                            Thread.sleep(100); // reduce CPU usage
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     }
                 }
-
-                private Message handleInventoryActions(Message msg) {
-                    Message response = null;
-                    Item item = null;
-                    
-                    switch(msg.getSecondaryHeader()) {
-                    
-                    case Header.CREATE:
-                    	String[] parts = ((String) msg.getData()).split(",");
-                    	System.out.println(parts.length);
-
-                    	String t = parts[0];           // Title
-                    	String y = parts[1]; 		   // Year
-                    	String a = parts[2];           // Author
-                    	int q = Integer.parseInt(parts[3]); // Quantity (assuming 4)
-                    	for(int i = 0; i < q; i++) {
-                        	itemList.addItem(t, y, a);
-                    	}
-				        response = new Message(
-				        		Header.NET, 
-				        		Header.ACK, 
-				        		q + " New " + t + " Item" + (q > 1 ? "s" : ""), 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-                    	break;
-                    	
-                    case Header.GET:
-                    	ItemList items = new ItemList(itemListType.Library, "");
-                    	String[] sec = ((String) msg.getData()).split(",");
-                    	String identifier = sec[0];          
-                    	String info = sec[1]; 		   
-                    	if(identifier.equals("title")) {
-                        	items = itemList.getItemsFromTitle(info);
-                    	}
-                    	else if(identifier.equals("id")){
-                        	items.addItem(itemList.getItemFromID(info));
-                    	}
-				        response = new Message(
-				        		Header.INV, 
-				        		Header.DATA, 
-				        		items, 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-				        break;
-				        
-                    case Header.TRANSFER:
-                    	sec = ((String) msg.getData()).split(",");
-                    	String id = sec[0];           // item id
-                    	String name = sec[1]; 		   // location name
-                    	item = (itemList.getItemFromID(id));
-                    	itemList.addLoc(name, id);
-				        response = new Message(
-				        		Header.NET, 
-				        		Header.ACK, 
-				        		"Location of Item successfully changed", 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-				        break;
-                    }
-                    return response;
-                }
-
-                private Message handleAccountActions(Message msg) {
-                    Message response = null;
-
-					switch (msg.getSecondaryHeader()) {
-					case Header.CREATE:
-					    System.out.println("Creating Account for client " + msg.getFrom() + " " + msg.getData());
-
-					    String name = msg.getData().toString().trim();
-					    if (name.isEmpty()) {
-					        System.out.println("Invalid name provided.");
-					        response = new Message(Header.NET, Header.ERR, null, "server", "client", "client", "server");
-					        break;
-					    }
-
-					    // Generate new member using just the name
-					    Member newMember = new Member(name);
-
-					    // Check if userID already exists (assuming userID is generated inside Member(name))
-					    boolean exists = (memberList.searchMember(newMember.getUserID()) != null);
-
-					    if (exists) {
-					        System.out.println("Account already exists for userID: " + newMember.getUserID());
-					        response = new Message(Header.NET, Header.ERR, null, "server", "client", "client", "server");
-					        break;
-					    }
-
-					    // Add, save, and acknowledge
-					    memberList.addMember(newMember);
-					    memberList.setModified(true);
-
-					    response = new Message(Header.NET, Header.ACK, newMember.toString(), "server", "client", "client", "server");
-					    break;
-
-                        case Header.DELETE:
-                            // Handle Account deletion
-                            response = new Message(Header.NET, Header.ACK, "Account Deleted", "server", "client", "client", "server");
-                            break;
-
-                        case Header.STATUS:
-                            // Handle Account status change by first finding account by id and then changing status to status
-                            response = new Message(Header.NET, Header.ACK, "Account Status Change", "server", "client", "client", "server");
-                            break;
-                            
-                        case Header.LOGIN:
-                            String msgData = msg.getData().toString();  // Get the data from the message
-                            String[] credentials = msgData.split(",");  // Split the string at the comma
-
-                            if (credentials.length == 2) {
-                                String user = credentials[0];  // First part before the comma
-                                String pass = credentials[1];  // Second part after the comma
-
-                                // Attempt login
-                                Object goodCred = staffList.attemptLogin(user, pass);
-                                
-                                if(goodCred == null) {
-                                	System.out.println("Wrong Password");
-                                    response = new Message(Header.NET, Header.ERR, "Wrong Password", "server", "client", "client", "server");
-                                }
-                                else if(goodCred instanceof Member) {
-                                	System.out.println("Successful client login");
-                                    response = new Message(Header.NET, Header.ACK, goodCred, "server", "client", "client", "server");
-                                }
-                                else if(goodCred.toString().equals("1")) {
-                                	System.out.println("That User doesnt exist");
-                                    response = new Message(Header.NET, Header.ERR, "That user doesnt exist", "server", "client", "client", "server");
-                                }
-                            }
-                            break;
-
-                        	
-                        case Header.EDIT:
-                            memberList.editMember((Member) msg.getData());
-                            response = new Message(Header.NET, Header.ACK, "Account Edited", "server", "client", "client", "server");
-                            break;
-                            
-                        case Header.MAKESTAFF:
-                        	Member member = memberList.searchMember(msg.getData().toString());
-                        	staffList.addMember(member);
-                        	memberList.removeMember(member.getUserID());
-                            response = new Message(Header.NET, Header.ACK, member.getUserID() + " is now staff.", "server", "client", "client", "server");
-                            break;
-                        	
-
-                        case Header.GET:
-                            // Handle Account data retrieval
-                            response = new Message(Header.ACCT, Header.DATA, memberList.searchMember(msg.getData().toString()), "server", "client", "client", "server");
-                            break;
-
-                        default:
-                            //Send Error
-                            response = new Message(Header.NET, Header.ERR, "Unknown secondary header for Account Management", "server", "client", "server", "client");
-
-                            break;
-                    }
-                    return response;
-                }
-
-                private Message handleLocationActions(Message msg) {
-                    Message response = null;
-                    Location loc;
-
-                	switch(msg.getSecondaryHeader()) {
-                	case Header.CREATE:
-                		locationList.addLocation((String) msg.getData());
-                        response = new Message(Header.NET, Header.ACK, "Location action executed", "server", "client", "server", "client");
-                        break;
-                	
-                	case Header.GET:
-                		loc = locationList.searchLocation((String) msg.getData());
-                		System.out.println(loc.toString());
-                        response = new Message(Header.LOC, Header.DATA, loc, "server", "client", "server", "client");
-                		break;
-                		
-                	case Header.ADD:
-                		String msgData = msg.getData().toString();  // Get the data from the message
-                        String[] request = msgData.split(",");  // Split the string at the comma
-
-                        if (request.length == 2) {
-                            String id = request[0];  // First part before the comma
-                            String location = request[1];  // Second part after the comma
-                            
-                    		loc = locationList.searchLocation(location);
-                    		
-                    		StaffMember staff = staffList.searchMember(id);
-                    		
-                    		loc.addStaffMember(staff);
-                    		
-                    		System.out.println("Staff Member successfully added");
-                    		response = new Message(Header.NET, Header.ACK, "Staff Member successfully added", "server", "client", "server", "client");
-                        }
-                	}
-                	
-                	return response;
-                }
-
-                private Message handleItemActions(Message msg) {
-                    Message response = null;
-
-                    // Handle Item Attention-related actions here
-                	String[] parts;
-
-                    switch (msg.getSecondaryHeader()) {
-                    case Header.CHECKIN:
-                    	parts = msg.getData().toString().split(",");
-                    	itemList.removeOwner(parts[0]);
-                    	System.out.println(parts[1] + " checked in " + parts[0]);
-                    	response = new Message(
-				        		Header.NET, 
-				        		Header.ACK, 
-				        		parts[1] + " checked in " + parts[0], 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-                    	break;
-                    	
-                    case Header.CHECKOUT:
-                    	parts = msg.getData().toString().split(",");
-                    	if(memberList.searchMember(parts[1]) != null) {
-
-                        	itemList.addOwner(parts[1], parts[0]);
-                        	System.out.println(parts[1] + " checked out " + parts[0]);
-                        	response = new Message(
-    				        		Header.NET, 
-    				        		Header.ACK, 
-    				        		parts[1] + " checked out " + parts[0], 
-    				        		"server", 
-    				        		"client", 
-    				        		"client", 
-    				        		"server");
-                    	}else {
-                    		response = new Message(
-    				        		Header.NET, 
-    				        		Header.ERR, 
-    				        		parts[1] + " is not an existing Member.", 
-    				        		"server", 
-    				        		"client", 
-    				        		"client", 
-    				        		"server");
-                    	}
-
-                    	break;
-                    	
-                    case Header.RESERVE:
-                    	parts = msg.getData().toString().split(",");
-                    	itemList.handleReservation(parts[0], parts[1]);
-                    	System.out.println(parts[1] + " reserved " + parts[0]);
-                    	response = new Message(
-				        		Header.NET, 
-				        		Header.ACK, 
-				        		parts[1] + " reserved " + parts[0], 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-                    	break;
-                    }
-                    return response;
-                }
-
-                private Message handleNetworkActions(Message msg) {
-                    Message response = null;
-					switch(msg.getSecondaryHeader()) {
-                    case Header.ACK:
-                    	response = new Message(
-				        		Header.NET, 
-				        		Header.ACK, 
-				        		"Acknowledgement of Disconnection", 
-				        		"server", 
-				        		"client", 
-				        		"client", 
-				        		"server");
-                    	break;
-                    	
-					default:
-						break;
-                    }
-					return response;
+            } catch (IOException | ClassNotFoundException e) {
+                System.err.println("Client handler encountered an error:");
+                e.printStackTrace();
+            } finally {
+                try {
+                    if (out != null) out.close();
+                    if (in != null) in.close();
+                    clientSocket.close();
+                    System.out.println("Client disconnected.");
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
-        
+
+        private Message handleInventoryActions(Message msg) {
+            Message response = null;
+            
+            switch(msg.getSecondaryHeader()) {
+                case Header.CREATE:
+                    String[] parts = ((String) msg.getData()).split(",");
+                    String title = parts[0];             // Title
+                    String year = parts[1];              // Year
+                    String author = parts[2];            // Author
+                    int quantity = Integer.parseInt(parts[3]); // Quantity
+                    
+                    for(int i = 0; i < quantity; i++) {
+                        itemList.addItem(title, year, author, "Library");
+                    }
+                    
+                    itemList.saveItems();
+                    response = new Message(
+                        Header.INV, 
+                        Header.ACK, 
+                        "Items created", 
+                        "server", 
+                        "client", 
+                        "client", 
+                        "server");
+                    break;
+                    
+                case Header.GET:
+                    ItemList resultList = new ItemList(false);
+                    String[] searchParams = ((String) msg.getData()).split(",");
+                    String searchType = searchParams[0];
+                    String searchValue = searchParams[1];
+                    
+                    if(searchType.equals("title")) {
+                        List<Item> foundItems = itemList.searchByTitle(searchValue);
+                        for (Item item : foundItems) {
+                            resultList.add(item);
+                        }
+                    } else if(searchType.equals("id")) {
+                        Item found = itemList.getItem(searchValue);
+                        if (found != null) {
+                            resultList.add(found);
+                        }
+                    }
+                    
+                    response = new Message(
+                        Header.INV, 
+                        Header.DATA, 
+                        resultList, 
+                        "server", 
+                        "client", 
+                        "client", 
+                        "server");
+                    break;
+                    
+                case Header.TRANSFER:
+                    String[] transferParams = ((String) msg.getData()).split(",");
+                    String itemId = transferParams[0];
+                    String newLocation = transferParams[1];
+                    
+                    Item item = itemList.getItem(itemId);
+                    if (item != null) {
+                        item.setLocation(newLocation);
+                        itemList.saveItems();
+                        response = new Message(
+                            Header.NET, 
+                            Header.ACK, 
+                            "Item transferred to " + newLocation, 
+                            "server", 
+                            "client", 
+                            "client", 
+                            "server");
+                    } else {
+                        response = new Message(
+                            Header.NET, 
+                            Header.ERR, 
+                            "Item not found", 
+                            "server", 
+                            "client", 
+                            "client", 
+                            "server");
+                    }
+                    break;
+                    
+                default:
+                    response = new Message(
+                        Header.NET, 
+                        Header.ERR, 
+                        "Unknown inventory action", 
+                        "server", 
+                        "client", 
+                        "client", 
+                        "server");
+            }
+            
+            return response;
+        }
+
+        private Message handleAccountActions(Message msg) {
+            switch (msg.getSecondaryHeader()) {
+                case Header.LOGIN:
+                    String[] creds = msg.getData().toString().split(",");
+                    if (creds.length == 2) {
+                        Member result = memberList.authenticate(creds[0], creds[1]);
+                        return result != null
+                            ? new Message(Header.NET, Header.ACK, result, "server", "client", "client", "server")
+                            : new Message(Header.NET, Header.ERR, "Invalid credentials", "server", "client", "client", "server");
+                    } else {
+                        return new Message(Header.NET, Header.ERR, "Malformed login", "server", "client", "client", "server");
+                    }
+
+                case Header.GET:
+                    Member found = memberList.getMemberByID(msg.getData().toString());
+                    return found != null
+                        ? new Message(Header.ACCT, Header.DATA, found, "server", "client", "client", "server")
+                        : new Message(Header.NET, Header.ERR, "User not found", "server", "client", "client", "server");
+
+                case Header.CREATE:
+                    String name = msg.getData().toString().trim();
+                    String newId = memberList.addMember(name);
+                    return new Message(
+                        Header.NET, 
+                        Header.ACK, 
+                        "New member added with ID: " + newId,
+                        "server",
+                        "client",
+                        "client",
+                        "server"
+                    );
+                    
+                case Header.EDIT:
+                    Member edited = (Member) msg.getData();
+                    if (edited instanceof StaffMember) {
+                        StaffMember editedStaff = (StaffMember) edited;
+                        memberList.removeStaffMember(editedStaff.getMemberID());
+                        memberList.getAllStaffMembers().add(editedStaff);
+                    } else {
+                        memberList.removeMember(edited.getMemberID());
+                        memberList.getAllMembers().add(edited);
+                    }
+                    memberList.saveAll();
+                    return new Message(Header.NET, Header.ACK, "Account updated", "server", "client", "client", "server");
+                
+                case Header.MAKESTAFF:
+                    Member member = memberList.getMemberByID(msg.getData().toString());
+                    if (member != null) {
+                        StaffMember newStaff = new StaffMember(
+                            member.getMemberID(),
+                            member.getName(),
+                            member.getStrikes(),
+                            member.isAccountHold(),
+                            member.isAccountBanned(),
+                            "Main Library",
+                            StaffMember.generatePassword()
+                        );
+                        
+                        memberList.removeMember(member.getMemberID());
+                        memberList.getAllStaffMembers().add(newStaff);
+                        memberList.saveAll();
+                        
+                        return new Message(
+                            Header.NET, 
+                            Header.ACK, 
+                            member.getMemberID() + " is now staff.",
+                            "server",
+                            "client",
+                            "client",
+                            "server"
+                        );
+                    } else {
+                        return new Message(
+                            Header.NET, 
+                            Header.ERR, 
+                            "Member not found",
+                            "server",
+                            "client",
+                            "client",
+                            "server"
+                        );
+                    }
+                
+                default:
+                    return new Message(Header.NET, Header.ERR, "Unknown account action", "server", "client", "client", "server");
+            }
+        }
+
+        private Message handleLocationActions(Message msg) {
+            switch (msg.getSecondaryHeader()) {
+                case Header.CREATE:
+                    boolean added = locationList.addLocation(msg.getData().toString());
+                    locationList.save();
+                    return new Message(Header.NET, added ? Header.ACK : Header.ERR,
+                        added ? "Location added" : "Location exists", "server", "client", "client", "server");
+
+                case Header.GET:
+                    String search = msg.getData().toString().trim();
+                    return locationList.contains(search)
+                        ? new Message(Header.LOC, Header.DATA, search, "server", "client", "client", "server")
+                        : new Message(Header.LOC, Header.DATA, null, "server", "client", "client", "server");
+                        
+                case Header.ADD:
+                    String[] addParams = msg.getData().toString().split(",");
+                    if (addParams.length == 2) {
+                        String staffId = addParams[0];
+                        String locationName = addParams[1];
+                        
+                        StaffMember staff = memberList.getStaffMember(staffId);
+                        if (staff != null && locationList.contains(locationName)) {
+                            staff.setLocation(locationName);
+                            memberList.saveAll();
+                            return new Message(
+                                Header.NET, 
+                                Header.ACK, 
+                                "Staff assigned to location", 
+                                "server", 
+                                "client", 
+                                "client", 
+                                "server");
+                        } else {
+                            return new Message(
+                                Header.NET, 
+                                Header.ERR, 
+                                "Staff or location not found", 
+                                "server", 
+                                "client", 
+                                "client", 
+                                "server");
+                        }
+                    } else {
+                        return new Message(
+                            Header.NET, 
+                            Header.ERR, 
+                            "Invalid parameters for ADD location", 
+                            "server", 
+                            "client", 
+                            "client", 
+                            "server");
+                    }
+
+                default:
+                    return new Message(Header.NET, Header.ERR, "Unknown location action", "server", "client", "client", "server");
+            }
+        }
+
+        private Message handleItemActions(Message msg) {
+            try {
+                String[] parts = msg.getData().toString().split(",");
+                switch (msg.getSecondaryHeader()) {
+                    case Header.CHECKOUT:
+                        String itemId = parts[0].trim();
+                        String memberId = parts[1].trim();
+                        
+                        if (memberList.getMemberByID(memberId) != null) {
+                            boolean success = itemList.checkoutItem(itemId, memberId);
+                            return new Message(
+                                Header.NET,
+                                success ? Header.ACK : Header.ERR,
+                                success ? memberId + " checked out " + itemId : "Checkout failed",
+                                "server", "client", "client", "server");
+                        } else {
+                            return new Message(
+                                Header.NET,
+                                Header.ERR,
+                                memberId + " is not an existing Member.",
+                                "server", "client", "client", "server");
+                        }
+
+                    case Header.CHECKIN:
+                        boolean returnSuccess = itemList.returnItem(parts[0].trim());
+                        return new Message(
+                            Header.NET,
+                            returnSuccess ? Header.ACK : Header.ERR,
+                            returnSuccess ? parts[1].trim() + " checked in " + parts[0].trim() : "Checkin failed",
+                            "server", "client", "client", "server");
+
+                    case Header.RESERVE:
+                        boolean reserveSuccess = itemList.reserveItem(parts[0].trim(), parts[1].trim());
+                        return new Message(
+                            Header.NET,
+                            reserveSuccess ? Header.ACK : Header.ERR,
+                            reserveSuccess ? parts[1].trim() + " reserved " + parts[0].trim() : "Reservation failed",
+                            "server", "client", "client", "server");
+
+                    default:
+                        return new Message(
+                            Header.NET, 
+                            Header.ERR, 
+                            "Unknown item action", 
+                            "server", 
+                            "client", 
+                            "client", 
+                            "server");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new Message(
+                    Header.NET, 
+                    Header.ERR, 
+                    "Server error in item handler", 
+                    "server", 
+                    "client", 
+                    "client", 
+                    "server");
+            }
+        }
+    }
+}
