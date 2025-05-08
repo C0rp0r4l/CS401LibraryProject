@@ -1,296 +1,731 @@
 package libraryMember;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.util.Scanner;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
+
+ //Library Client 
+ //Connects to the library management server and provides a user-friendly interface
+ 
 public class Client {
-    private static final String serverAddress = "localhost"; // this is where we’re trying to connect to
-    private static final int Port = 7777; // the server is expected to be listening on this port
-    private static boolean isConnected = false; // just a simple flag to keep track of our connection status
-    private static Member member = null;
+    private static final String SERVER_ADDRESS = "localhost";
+    private static final int SERVER_PORT = 7777;
+    private static boolean isConnected = false;
+    private static Member currentUser = null;
+    private static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
-        try (Socket socket = new Socket(serverAddress, Port);
-             ObjectOutputStream outSocket = new ObjectOutputStream(socket.getOutputStream());
-             ObjectInputStream inSocket = new ObjectInputStream(socket.getInputStream());
-             Scanner scanner = new Scanner(System.in)) {
+        System.out.println("==== Library Management System Client ====");
+        System.out.println("Connecting to server at " + SERVER_ADDRESS + ":" + SERVER_PORT);
+        
+        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+             ObjectOutputStream outToServer = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream inFromServer = new ObjectInputStream(socket.getInputStream())) {
 
-            isConnected = true; // we made it we’re connected
-            System.out.println("Connected to server at " + serverAddress + ":" + Port);
-
-            Message inboundMessage;
-            while (true) {
-            	inboundMessage = (Message) inSocket.readObject();
-                if(inboundMessage != null) {
-                	processMessage(inboundMessage, outSocket, inSocket, scanner);
-                }
-                
-                while (member != null) {
-                	displayMenu(); // show the menu
-                    int choice = getValidChoice(scanner, 2); // grab user input and validate it
-
-                    switch (choice) {
-                        case 1: { //add member
-                            System.out.print("Enter member name: "); // ask for a new member’s name
-                            String name = scanner.nextLine();
-                            Message createMsg = new Message(
-                            		Header.ACCT, 
-                            		Header.CREATE, 
-                            		name,
-                            		"client",
-                            		"server",
-                            		"server",
-                            		"client");
-                            outSocket.writeObject(createMsg); // send it off
-                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
-                            processMessage(inboundMessage, outSocket, inSocket, scanner);
-                            break;
-                        }
-
-                        case 2: {//search member
-                            System.out.print("Enter member ID to search: "); // ask who to search
-                            String memberId = scanner.nextLine();
-                            Message searchMsg = new Message(
-                            		Header.ACCT, 
-                            		Header.GET, 
-                            		memberId,
-                            		"client",
-                            		memberId,
-                            		"server",
-                            		"client");
-                            outSocket.writeObject(searchMsg);
-                            inboundMessage = (Message) inSocket.readObject();
-                            processMessage(inboundMessage, outSocket, inSocket, scanner);
-                            break;
-                        }
-
-                        case 3: {//add location
-                            System.out.print("Not Yet Implemented");
-                            break;
-                        }
-
-                        case 4: {//search a specific location
-                            System.out.print("Not Yet Implemented");
-                            break;
-                        }
-
-                        case 5: {//add an item
-                            System.out.print("Title: "); // ask for a new item title
-                            String title = scanner.nextLine();
-                            System.out.print("Year: "); // ask for a new item year
-                            String year = scanner.nextLine();
-                            System.out.print("Author: "); // ask for a new item author
-                            String author = scanner.nextLine();
-                            System.out.print("Quantity: "); // ask for a new item quantity
-                            String quant = scanner.nextLine();
-                            Message createMsg = new Message(
-                            		Header.INV, 
-                            		Header.CREATE, 
-                            		title + "," + year + "," + author + "," + quant,
-                            		"client",
-                            		"server",
-                            		"server",
-                            		"client");
-                            outSocket.writeObject(createMsg); // send it off
-                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
-                            processMessage(inboundMessage, outSocket, inSocket, scanner);
-                            break;
-                        }
-
-                        case 6: {//search a specific item
-                        	System.out.print("Title of item? : "); // ask for a new member’s name
-                            String title = scanner.nextLine();
-                            Message searchMsg = new Message(
-                            		Header.INV, 
-                            		Header.GET, 
-                            		title,
-                            		"client",
-                            		"server",
-                            		"server",
-                            		"client");
-                            outSocket.writeObject(searchMsg); // send it off
-                            inboundMessage = (Message) inSocket.readObject(); // wait for reply
-                            processMessage(inboundMessage, outSocket, inSocket, scanner);
-                            break;
-                        }
-
-                        default: {
-                            System.out.println("Invalid option. Try again."); // just in case somehow it’s wrong
-                        }
-                    }
-                }
-            }
-
-        } catch (IOException | ClassNotFoundException e) {
-            isConnected = false; // we lost connection or had some issue
-            System.err.println("Error: " + e.getMessage());
+            isConnected = true;
+            System.out.println("Connected successfully to the library server!");
+            
+            // Start the communication loop with the server
+            communicateWithServer(outToServer, inFromServer);
+            
+        } catch (IOException e) {
+            System.err.println("Connection error: " + e.getMessage());
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            System.err.println("Data error: " + e.getMessage());
+            e.printStackTrace();
         } finally {
-            System.out.println("Client shutting down."); // always say goodbye
-            System.exit(0); // peace out
+            isConnected = false;
+            System.out.println("Disconnected from server. Goodbye!");
+            scanner.close();
         }
     }
-    
-    private static void processMessage(Message msg, ObjectOutputStream out, ObjectInputStream in, Scanner scanner) {
-        switch (msg.getPrimaryHeader()) {
-            case Header.ACCT:
-                // Handle account-related messages
-                switch (msg.getSecondaryHeader()) {
-                    case Header.GET:
-                    	while (member == null) {
-                        System.out.println("Would you like to... \n1. Log in\n2. Sign up");
-                        String continueChoice = scanner.nextLine().trim();
-                        if ("1".equalsIgnoreCase(continueChoice)) {
-                        	System.out.println("Username: ");
-                            String u = scanner.nextLine();
-                            System.out.println("Password: ");
-                            String p = scanner.nextLine();
 
-                            Message loginMsg = new Message(
-                                Header.ACCT, 
-                                Header.LOGIN, 
-                                u + "," + p,  // Send user and password in the format "user,pass"
-                                "client",
-                                "login to existing user",
-                                "server",
-                                "client");
 
-                            try {
-                                // Send login message to server
-                                out.writeObject(loginMsg);
-                                out.flush();  // Ensure it's sent immediately
-                                System.out.println("Login request sent. Waiting for server response...");
+    //Main communication loop with the server
 
-                                // Wait for server's acknowledgement message
-                                Message inboundMessage = (Message) in.readObject(); // Block until a response is received
-	                            processMessage(inboundMessage, out, in, scanner);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            } catch (ClassNotFoundException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-                        }
-                        else if ("2".equalsIgnoreCase(continueChoice)) {
-                        	System.out.println("Name: ");
-                        	String name = scanner.nextLine();
-                        	
-                            Message createMsg = new Message(
-                            		Header.ACCT, 
-                            		Header.CREATE, 
-                            		name,
-                            		"client",
-                            		"new user",
-                            		"server",
-                            		"client");
-
-                            try {
-								out.writeObject(createMsg);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-                        }
-                    	}
-                    	break;
-
-                    case Header.CREATE:
-                        System.out.println("Account creation response received: " + msg.getData());
+    private static void communicateWithServer(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        Message serverMessage;
+        
+        // Handle initial server messages (usually login request)
+        serverMessage = (Message) in.readObject();
+        processServerMessage(serverMessage, out, in);
+        
+        // Main application loop
+        while (isConnected) {
+            if (currentUser == null) {
+                // Not logged in yet, wait for login response
+                if (in.available() > 0) {
+                    serverMessage = (Message) in.readObject();
+                    processServerMessage(serverMessage, out, in);
+                }
+                
+                // If still not logged in, try again
+                if (currentUser == null) {
+                    handleLogin(out, in);
+                }
+            } else {
+                // Already logged in, show the main menu
+                displayMainMenu();
+                int choice = getValidChoice(1, 7);
+                
+                switch (choice) {
+                    case 1: // Search for books
+                        handleBookSearch(out, in);
                         break;
-                        
-                    case Header.DATA:
-                    	System.out.println(msg.getData().toString());
-                    	break;
-
-                    default:
-                        System.out.println("Unknown account action received.");
+                    case 2: // Search for members
+                        handleMemberSearch(out, in);
+                        break;
+                    case 3: // Add new book
+                        handleAddBook(out, in);
+                        break;
+                    case 4: // Add new member
+                        handleAddMember(out, in);
+                        break;
+                    case 5: // Manage locations
+                        handleLocationManagement(out, in);
+                        break;
+                    case 6: // View my account
+                        System.out.println("\nMy Account Information:");
+                        System.out.println(currentUser.toString());
+                        System.out.println("\nPress Enter to continue...");
+                        scanner.nextLine();
+                        break;
+                    case 7: // Exit
+                        System.out.println("Logging out...");
+                        isConnected = false;
                         break;
                 }
+            }
+        }
+    }
+
+
+    //Handle the login process
+
+    private static void handleLogin(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        System.out.println("\n==== Login ====");
+        System.out.print("Username/Member ID: ");
+        String username = scanner.nextLine().trim();
+        
+        System.out.print("Password: ");
+        String password = scanner.nextLine().trim();
+        
+        Message loginMessage = new Message(
+            Header.ACCT,
+            Header.LOGIN,
+            username + "," + password,
+            "client",
+            "server",
+            "server",
+            "client"
+        );
+        
+        out.writeObject(loginMessage);
+        out.flush();
+        
+        // Wait for server response
+        Message response = (Message) in.readObject();
+        processServerMessage(response, out, in);
+    }
+
+    //Handle book search functionality
+    private static void handleBookSearch(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        System.out.println("\n==== Search Books ====");
+        System.out.println("1. Search by Title");
+        System.out.println("2. Search by ID");
+        System.out.print("Choose search method: ");
+        
+        int searchChoice = getValidChoice(1, 2);
+        String searchType, searchValue;
+        
+        if (searchChoice == 1) {
+            System.out.print("Enter book title: ");
+            searchValue = scanner.nextLine().trim();
+            searchType = "title";
+        } else {
+            System.out.print("Enter book ID: ");
+            searchValue = scanner.nextLine().trim();
+            searchType = "id";
+        }
+        
+        Message searchMessage = new Message(
+            Header.INV,
+            Header.GET,
+            searchType + "," + searchValue,
+            "client",
+            "server",
+            "server",
+            "client"
+        );
+        
+        out.writeObject(searchMessage);
+        out.flush();
+        
+        // Wait for server response
+        Message response = (Message) in.readObject();
+        processServerMessage(response, out, in);
+        
+        // If we found items, show action menu
+        if (response.getSecondaryHeader() == Header.DATA && response.getData() instanceof ItemList) {
+            handleItemActions((ItemList) response.getData(), out, in);
+        }
+    }
+
+
+    //Handle actions for a specific item
+    private static void handleItemActions(ItemList itemList, ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        List<Item> items = itemList.getAllItems();
+        if (items.isEmpty()) {
+            System.out.println("No items found.");
+            return;
+        }
+        
+        System.out.println("\n==== Book Results ====");
+        for (int i = 0; i < items.size(); i++) {
+            System.out.println((i + 1) + ". " + items.get(i).getTitle() + " by " + items.get(i).getAuthor() + 
+                    " (" + items.get(i).getYear() + ") - ID: " + items.get(i).getItemID());
+        }
+        
+        System.out.print("Select a book (1-" + items.size() + ") or 0 to go back: ");
+        int selection = getValidChoice(0, items.size());
+        
+        if (selection == 0) return;
+        
+        Item selectedItem = items.get(selection - 1);
+        System.out.println("\n==== Book Details ====");
+        System.out.println(selectedItem.toString());
+        
+        System.out.println("\n==== Book Actions ====");
+        System.out.println("1. " + (selectedItem.getOwnedBy() == null ? "Check out book" : "Return book"));
+        System.out.println("2. " + (selectedItem.getReservedBy().contains(currentUser.getMemberID()) ? 
+                "Cancel my reservation" : "Reserve book"));
+        System.out.println("3. Change location");
+        System.out.println("4. Back to main menu");
+        
+        int actionChoice = getValidChoice(1, 4);
+        Message actionMessage = null;
+        
+        switch (actionChoice) {
+            case 1: // Check out/return
+                if (selectedItem.getOwnedBy() == null) {
+                    // Check out
+                    actionMessage = new Message(
+                        Header.ITEM,
+                        Header.CHECKOUT,
+                        selectedItem.getItemID() + "," + currentUser.getMemberID(),
+                        "client",
+                        "server",
+                        "server",
+                        "client"
+                    );
+                } else {
+                    // Return
+                    actionMessage = new Message(
+                        Header.ITEM,
+                        Header.CHECKIN,
+                        selectedItem.getItemID() + "," + currentUser.getMemberID(),
+                        "client",
+                        "server",
+                        "server",
+                        "client"
+                    );
+                }
+                break;
+                
+            case 2: // Reserve/Cancel reservation
+                actionMessage = new Message(
+                    Header.ITEM,
+                    Header.RESERVE,
+                    selectedItem.getItemID() + "," + currentUser.getMemberID(),
+                    "client",
+                    "server",
+                    "server",
+                    "client"
+                );
+                break;
+                
+            case 3: // Change location
+                System.out.print("Enter new location name: ");
+                String newLocation = scanner.nextLine().trim();
+                
+                actionMessage = new Message(
+                    Header.INV,
+                    Header.TRANSFER,
+                    selectedItem.getItemID() + "," + newLocation,
+                    "client",
+                    "server",
+                    "server",
+                    "client"
+                );
+                break;
+                
+            case 4: // Back
+                return;
+        }
+        
+        if (actionMessage != null) {
+            out.writeObject(actionMessage);
+            out.flush();
+            
+            // Wait for server response
+            Message response = (Message) in.readObject();
+            processServerMessage(response, out, in);
+        }
+    }
+
+
+    //Handle member search functionality
+    private static void handleMemberSearch(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        System.out.println("\n==== Search Members ====");
+        System.out.print("Enter member ID: ");
+        String memberId = scanner.nextLine().trim();
+        
+        Message searchMessage = new Message(
+            Header.ACCT,
+            Header.GET,
+            memberId,
+            "client",
+            memberId,
+            "server",
+            "client"
+        );
+        
+        out.writeObject(searchMessage);
+        out.flush();
+        
+        // Wait for server response
+        Message response = (Message) in.readObject();
+        processServerMessage(response, out, in);
+        
+        if (response.getSecondaryHeader() == Header.DATA && response.getData() instanceof Member) {
+            Member foundMember = (Member) response.getData();
+            
+            System.out.println("\n==== Member Actions ====");
+            System.out.println("1. " + (foundMember.isAccountHold() ? "Remove account hold" : "Place account hold"));
+            System.out.println("2. " + (foundMember instanceof StaffMember ? "Change location" : "Make staff member"));
+            System.out.println("3. Back to main menu");
+            
+            int actionChoice = getValidChoice(1, 3);
+            Message actionMessage = null;
+            
+            switch (actionChoice) {
+                case 1: // Toggle hold
+                    foundMember.setAccountHold(!foundMember.isAccountHold());
+                    actionMessage = new Message(
+                        Header.ACCT,
+                        Header.EDIT,
+                        foundMember,
+                        "client",
+                        "server",
+                        "server",
+                        "client"
+                    );
+                    break;
+                    
+                case 2: // Make staff/change location
+                    if (foundMember instanceof StaffMember) {
+                        System.out.print("Enter new location: ");
+                        String newLocation = scanner.nextLine().trim();
+                        ((StaffMember) foundMember).setLocation(newLocation);
+                        
+                        actionMessage = new Message(
+                            Header.ACCT,
+                            Header.EDIT,
+                            foundMember,
+                            "client",
+                            "server",
+                            "server",
+                            "client"
+                        );
+                    } else {
+                        actionMessage = new Message(
+                            Header.ACCT,
+                            Header.MAKESTAFF,
+                            foundMember.getMemberID(),
+                            "client",
+                            "server",
+                            "server",
+                            "client"
+                        );
+                    }
+                    break;
+                    
+                case 3: // Back
+                    return;
+            }
+            
+            if (actionMessage != null) {
+                out.writeObject(actionMessage);
+                out.flush();
+                
+                // Wait for server response
+                response = (Message) in.readObject();
+                processServerMessage(response, out, in);
+            }
+        }
+    }
+
+
+    //Handle adding a new book
+    private static void handleAddBook(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        System.out.println("\n==== Add New Book ====");
+        System.out.print("Title: ");
+        String title = scanner.nextLine().trim();
+        
+        System.out.print("Year: ");
+        String year = scanner.nextLine().trim();
+        
+        System.out.print("Author: ");
+        String author = scanner.nextLine().trim();
+        
+        System.out.print("Quantity: ");
+        int quantity = getValidIntInput();
+        
+        Message addMessage = new Message(
+            Header.INV,
+            Header.CREATE,
+            title + "," + year + "," + author + "," + quantity,
+            "client",
+            "server",
+            "server",
+            "client"
+        );
+        
+        out.writeObject(addMessage);
+        out.flush();
+        
+        // Wait for server response
+        Message response = (Message) in.readObject();
+        processServerMessage(response, out, in);
+    }
+
+
+    //Handle adding a new member
+    private static void handleAddMember(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        System.out.println("\n==== Add New Member ====");
+        System.out.print("Name: ");
+        String name = scanner.nextLine().trim();
+        
+        Message addMessage = new Message(
+            Header.ACCT,
+            Header.CREATE,
+            name,
+            "client",
+            "server",
+            "server",
+            "client"
+        );
+        
+        out.writeObject(addMessage);
+        out.flush();
+        
+        // Wait for server response
+        Message response = (Message) in.readObject();
+        processServerMessage(response, out, in);
+    }
+
+
+    //Handle location management
+    private static void handleLocationManagement(ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        System.out.println("\n==== Location Management ====");
+        System.out.println("1. Add new location");
+        System.out.println("2. Search location");
+        System.out.println("3. Back to main menu");
+        
+        int choice = getValidChoice(1, 3);
+        
+        switch (choice) {
+            case 1: // Add location
+                System.out.print("Enter new location name: ");
+                String locationName = scanner.nextLine().trim();
+                
+                Message addMessage = new Message(
+                    Header.LOC,
+                    Header.CREATE,
+                    locationName,
+                    "client",
+                    "server",
+                    "server",
+                    "client"
+                );
+                
+                out.writeObject(addMessage);
+                out.flush();
+                
+                // Wait for server response
+                Message response = (Message) in.readObject();
+                processServerMessage(response, out, in);
+                break;
+                
+            case 2: // Search location
+                System.out.print("Enter location name to search: ");
+                String searchName = scanner.nextLine().trim();
+                
+                Message searchMessage = new Message(
+                    Header.LOC,
+                    Header.GET,
+                    searchName,
+                    "client",
+                    "server",
+                    "server",
+                    "client"
+                );
+                
+                out.writeObject(searchMessage);
+                out.flush();
+                
+                // Wait for server response
+                response = (Message) in.readObject();
+                processServerMessage(response, out, in);
+                
+                if (response.getSecondaryHeader() == Header.DATA && response.getData() instanceof String) {
+                    String foundLocation = (String) response.getData();
+                    
+                    System.out.println("\n==== Location Actions ====");
+                    System.out.println("1. Add staff to location");
+                    System.out.println("2. Back to main menu");
+                    
+                    int actionChoice = getValidChoice(1, 2);
+                    
+                    if (actionChoice == 1) {
+                        System.out.print("Enter staff member ID to add: ");
+                        String staffId = scanner.nextLine().trim();
+                        
+                        Message staffMessage = new Message(
+                            Header.LOC,
+                            Header.ADD,
+                            staffId + "," + foundLocation,
+                            "client",
+                            "server",
+                            "server",
+                            "client"
+                        );
+                        
+                        out.writeObject(staffMessage);
+                        out.flush();
+                        
+                        // Wait for server response
+                        response = (Message) in.readObject();
+                        processServerMessage(response, out, in);
+                    }
+                }
+                break;
+                
+            case 3: // Back
+                return;
+        }
+    }
+
+
+    //Process messages received from the server
+    private static void processServerMessage(Message msg, ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        if (msg == null) {
+            return;
+        }
+        
+        // Handle different message types
+        switch (msg.getPrimaryHeader()) {
+            case Header.ACCT:
+                handleAccountMessage(msg, out, in);
                 break;
                 
             case Header.INV:
-            	//Handle inventory-related messages
-            	switch(msg.getSecondaryHeader()) {
-            	case Header.DATA:
-            		if(msg.getData() == null) {
-            			System.out.println("No inventory with that title");
-            		}
-            		else if (msg.getData() instanceof Item) {
-            			Item item = (Item) msg.getData();
-            			boolean checked = item.isCheckedOut();
-            			System.out.println("What would you like to do with this item?");
-            			if(checked) {
-            				System.out.println("1. Check in Item");
-            			}
-            			else {
-            				System.out.println("1. Check out Item");
-            			}
-            	        System.out.println("2. Reserve Item");
-            	        int choice = getValidChoice(scanner, 2);
-            	        
-            	        
-            		}
-            	}
-
+                handleInventoryMessage(msg);
+                break;
+                
+            case Header.LOC:
+                handleLocationMessage(msg);
+                break;
+                
             case Header.NET:
-                // Handle network-related messages (e.g., ACK, ERR)
-                switch (msg.getSecondaryHeader()) {
-                    case Header.ACK:
-                    	System.out.println("Ack msg recieved");
-                        if (msg.getData() instanceof String) {
-                            System.out.println(msg.getData().toString());
-                        }
-                        else if (msg.getData() instanceof Member) {
-                            member = (Member) msg.getData();
-                            System.out.println("Login successful. Welcome, " + member.getName() + "!");
-                        }
-                        break;
-
-                    case Header.ERR:
-                        System.out.println("ERR: " + msg.getData());
-                        break;
-
-                    default:
-                        System.out.println("Unknown network action received.");
-                        break;
-                }
+                handleNetworkMessage(msg);
                 break;
-
+                
             default:
-                System.out.println("Unknown primary header received.");
-                break;
+                System.out.println("Unknown message type received: " + msg.getPrimaryHeader());
         }
-        return;
     }
 
-    private static void displayMenu() {
-        System.out.println("\nLibrary Member System - Select an option:");
-        System.out.println("1. Add Member");
-        System.out.println("2. Search Member");
-        System.out.println("3. Add Location");
-        System.out.println("4. Search Location");
-        System.out.println("5. Add Item");
-        System.out.println("6. Search Item");
-    }
-
-    private static int getValidChoice(Scanner scanner, int limit) {
-        int choice = -1; // start invalid
-        while (true) {
-            System.out.print("Enter choice (1-" + limit + "): ");
-            if (scanner.hasNextInt()) {
-                choice = scanner.nextInt();
-                scanner.nextLine(); // eat newline so next input is clean
-                if (choice >= 1 && choice <= limit) {
-                    break; // we got a good number
-                } else {
-                    System.out.println("Invalid option. Please choose between 1 and 6.");
+    
+    //Handle account-related messages
+    private static void handleAccountMessage(Message msg, ObjectOutputStream out, ObjectInputStream in) 
+            throws IOException, ClassNotFoundException {
+        
+        switch (msg.getSecondaryHeader()) {
+            case Header.GET:
+                // We received a login request
+                if (currentUser == null) {
+                    handleLogin(out, in);
                 }
-            } else {
-                System.out.println("Invalid input. Please enter a number.");
-                scanner.next(); // toss the bad input
+                break;
+                
+            case Header.DATA:
+                // We received member data
+                if (msg.getData() instanceof Member) {
+                    Member foundMember = (Member) msg.getData();
+                    System.out.println("\nMember found: " + foundMember.getName() + " (ID: " + foundMember.getMemberID() + ")");
+                    System.out.println("Account status: " + 
+                            (foundMember.isAccountBanned() ? "BANNED" : 
+                            (foundMember.isAccountHold() ? "ON HOLD" : "ACTIVE")));
+                    System.out.println("Strikes: " + foundMember.getStrikes());
+                    
+                    if (foundMember instanceof StaffMember) {
+                        System.out.println("Staff member at location: " + ((StaffMember)foundMember).getLocation());
+                    }
+                } else {
+                    System.out.println("Member not found.");
+                }
+                break;
+                
+            default:
+                System.out.println("Unknown account action: " + msg.getSecondaryHeader());
+        }
+    }
+
+
+    //Handle inventory-related messages
+    private static void handleInventoryMessage(Message msg) {
+        switch (msg.getSecondaryHeader()) {
+            case Header.DATA:
+                if (msg.getData() == null) {
+                    System.out.println("No items found matching the search criteria.");
+                } else if (msg.getData() instanceof ItemList) {
+                    ItemList items = (ItemList) msg.getData();
+                    if (items.getAllItems().isEmpty()) {
+                        System.out.println("No items found matching the search criteria.");
+                    } else {
+                        System.out.println("\nFound " + items.getAllItems().size() + " items:");
+                    }
+                }
+                break;
+                
+            default:
+                System.out.println("Unknown inventory action: " + msg.getSecondaryHeader());
+        }
+    }
+
+
+    //Handle location-related messages
+    private static void handleLocationMessage(Message msg) {
+        switch (msg.getSecondaryHeader()) {
+            case Header.DATA:
+                if (msg.getData() == null) {
+                    System.out.println("Location not found.");
+                } else if (msg.getData() instanceof String) {
+                    System.out.println("Location found: " + msg.getData());
+                }
+                break;
+                
+            default:
+                System.out.println("Unknown location action: " + msg.getSecondaryHeader());
+        }
+    }
+
+
+    //Handle network-related messages
+    private static void handleNetworkMessage(Message msg) {
+        switch (msg.getSecondaryHeader()) {
+            case Header.ACK:
+                if (msg.getData() instanceof String) {
+                    System.out.println("✓ " + msg.getData());
+                } else if (msg.getData() instanceof Member) {
+                    currentUser = (Member) msg.getData();
+                    System.out.println("Login successful! Welcome, " + currentUser.getName() + "!");
+                    
+                    if (currentUser instanceof StaffMember) {
+                        System.out.println("You are logged in as staff at location: " + 
+                                ((StaffMember)currentUser).getLocation());
+                    }
+                }
+                break;
+                
+            case Header.ERR:
+                System.out.println("✗ Error: " + msg.getData());
+                break;
+                
+            default:
+                System.out.println("Unknown network action: " + msg.getSecondaryHeader());
+        }
+    }
+
+
+    //Display the main menu
+    private static void displayMainMenu() {
+        System.out.println("\n==== Library Management System ====");
+        System.out.println("User: " + currentUser.getName() + " (" + currentUser.getMemberID() + ")");
+        System.out.println("1. Search for books");
+        System.out.println("2. Search for members");
+        System.out.println("3. Add new book");
+        System.out.println("4. Add new member");
+        System.out.println("5. Manage locations");
+        System.out.println("6. View my account");
+        System.out.println("7. Exit");
+    }
+
+
+    //Get a valid integer choice from the user
+
+    private static int getValidChoice(int min, int max) {
+        int choice = -1;
+        boolean validInput = false;
+        
+        while (!validInput) {
+            System.out.print("Enter your choice (" + min + "-" + max + "): ");
+            
+            try {
+                choice = Integer.parseInt(scanner.nextLine().trim());
+                if (choice >= min && choice <= max) {
+                    validInput = true;
+                } else {
+                    System.out.println("Please enter a number between " + min + " and " + max + ".");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
             }
         }
+        
         return choice;
+    }
+
+   
+    //Get a valid integer input from the user
+    private static int getValidIntInput() {
+        int value = -1;
+        boolean validInput = false;
+        
+        while (!validInput) {
+            try {
+                value = Integer.parseInt(scanner.nextLine().trim());
+                if (value >= 0) {
+                    validInput = true;
+                } else {
+                    System.out.print("Please enter a non-negative number: ");
+                }
+            } catch (NumberFormatException e) {
+                System.out.print("Please enter a valid number: ");
+            }
+        }
+        
+        return value;
     }
 }

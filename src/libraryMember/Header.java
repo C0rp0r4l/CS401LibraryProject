@@ -11,6 +11,7 @@ public enum Header {
     GET,        // Get - String ItemID (Get item associated to itemID)
     DATA,       // Data - Item ItemA (Passing of ItemA)
 
+    MAKESTAFF,  // MakeStaff - To make this user a staff member
     // Account Management
     ACCT,
     LOGIN,

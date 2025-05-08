@@ -1,98 +1,97 @@
 package libraryMember;
 
 import java.io.Serializable;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Item implements Serializable {
-    static private int count = 0;
-    private String itemID;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String itemID;
     private String title;
     private String year;
     private String author;
-    private String[] memberList;
-    private Integer numMember;
-    private Integer quantity;
+    private String location;
+    private String ownedBy;
+    private int reserved;
+    private List<String> reservedBy;
     
-    public Item(String t, String y, String a, Integer q) {
-        title = t;
-        year = y;
-        author = a;
-        quantity = q;
-        memberList = new String[100];
-        
-        String temp = t.substring(0, 2) + y.substring(0,4) + a.substring(0,2);
-        Random rand = new Random();
-        int randomDigits = rand.nextInt(30000) + 10000;
-        itemID = temp + randomDigits + count;
-        count++;
+    public Item(String itemID, String title, String year, String author, 
+               String location, String ownedBy, int reserved, List<String> reservedBy) {
+        this.itemID = itemID;
+        this.title = title;
+        this.year = year;
+        this.author = author;
+        this.location = location;
+        this.ownedBy = ownedBy;
+        this.reserved = reserved;
+        this.reservedBy = new ArrayList<>(reservedBy);
     }
+
+    // Getters
+    public String getItemID() { return itemID; }
+    public String getTitle() { return title; }
+    public String getYear() { return year; }
+    public String getAuthor() { return author; }
+    public String getLocation() { return location; }
+    public String getOwnedBy() { return ownedBy; }
+    public int getReservedCount() { return reserved; }
+    public List<String> getReservedBy() { return new ArrayList<>(reservedBy); }
+
+    // Setters
+    public void setLocation(String location) { this.location = location; }
     
-    public Item(String i, String t, String y, String a, Integer q) {
-        title = t;
-        year = y;
-        author = a;
-        quantity = q;
-        memberList = new String[100];
-    }
-    
-    public boolean isCheckedOut() {
-    	if(numMember >= quantity) {
-    		return true;
-    	}
-    	return false;
-    }
-    
-    public Boolean addMember(String id) {
-        if(memberList.length >= quantity) {
-            return false;
-        }
-        else {
-            memberList[numMember] = id;
+    // Ownership management
+    public boolean setOwnedBy(String memberID) {
+        if (ownedBy == null || ownedBy.isEmpty()) {
+            ownedBy = memberID;
             return true;
         }
+        return false;
+    }
+    
+    public boolean releaseOwnership() {
+        if (ownedBy != null && !ownedBy.isEmpty()) {
+            ownedBy = null;
+            return true;
+        }
+        return false;
     }
 
-    public Boolean removeMember(String id){
-        for(int i = 0; i < numMember; i++) {
-            if(memberList[i].compareTo(id) == 0){
-                memberList[i] = memberList[numMember];
-                return true;
-            }
+    // Reservation management
+    public boolean addReservation(String memberID) {
+        if (!reservedBy.contains(memberID)) {
+            reservedBy.add(memberID);
+            reserved = reservedBy.size();
+            return true;
         }
         return false;
     }
     
-    public Boolean isMemberHere(String id) {
-        for(int i = 0; i < numMember; i++) { 
-            if(memberList[i].compareTo(id) == 0) {
-                return true;
-            }
+    public boolean removeReservation(String memberID) {
+        boolean removed = reservedBy.remove(memberID);
+        if (removed) {
+            reserved = reservedBy.size();
         }
-        return false;
+        return removed;
     }
 
+    // File format: itemID,Title,Year,Author,Location,ownedBy,reservedCount,reservedID1,reservedID2,...
+    public String toFileFormat() {
+        return String.format("%s,%s,%s,%s,%s,%s,%d,%s",
+            itemID, title, year, author, location, 
+            ownedBy != null ? ownedBy : "null",
+            reserved,
+            String.join(",", reservedBy));
+    }
+
+    @Override
     public String toString() {
-        String temp = itemID + "," + title + "," + year + "," + author + "," + quantity + "," + numMember;
-        for(int i = 0; i < memberList.length; i++) {
-            String list = "," + memberList[i];
-            temp.concat(list);
-        }
-        return temp;
-    }
-    
-    public String getID() {
-        return itemID;
-    }
-    
-    public String getTitle() {
-        return title;
-    }
-    
-    public String getYear() {
-        return year;
-    }
-    
-    public String getAuthor() {
-        return author;
+        return String.format("ID: %s | Title: %s | Author: %s | Location: %s | %s | Reservations: %d",
+            itemID, title, author, location,
+            ownedBy != null ? "Checked out by: " + ownedBy : "Available",
+            reserved);
     }
 }
