@@ -1,0 +1,5 @@
+MEM1000,Joshua,1,false,false
+MEM1001,Jordan,0,false,false
+MEM1002,Ricky,0,false,false
+MEM1003,Arsen,0,false,false
+MEM1006,Mass,0,false,false

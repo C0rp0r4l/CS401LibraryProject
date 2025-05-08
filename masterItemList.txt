@@ -1,0 +1,10 @@
+BK2023001,The Great Gatsby,1925,F. Scott Fitzgerald,Danville,MEM1000,1,MEM1001
+BK2023002,To Kill a Mockingbird,1960,Harper Lee,Danville,null,0,
+BK2023003,1984,1949,George Orwell,Danville,null,0,
+BK2023004,Pride and Prejudice,1813,Jane Austen,Danville,null,0,
+BK2023005,The Hobbit,1937,J.R.R. Tolkien,Danville,null,0,
+BK2023006,Dune,1965,Frank Herbert,Danville,null,0,
+BK2023007,The Catcher in the Rye,1951,J.D. Salinger,Danville,null,0,
+BK2023008,Brave New World,1932,Aldous Huxley,Danville,null,0,
+BK2023009,The Lord of the Rings,1954,J.R.R. Tolkien,Danville,null,0,
+BK2023010,Animal Farm,1945,George Orwell,Danville,null,0,
