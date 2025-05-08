@@ -1,0 +1,5 @@
+MEM1002,arsen,0,false,false
+MEM1003,alllder,0,false,false
+MEM1003,Chelsea,0,false,false
+MEM1004,Ronaldo,0,false,false
+MEM1004,Uran,0,false,false

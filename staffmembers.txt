@@ -1,0 +1,3 @@
+STAFF001,Admin User,0,false,false,Main Library,Xk8p9Lm2nQ
+STAFF002,Librarian Alice,0,false,false,Bishkek,7GhT5yPq1w
+STAFF003,Manager Bob,1,false,false,Hayward,z3Rt6Yv9Xk

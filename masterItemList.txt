@@ -1,0 +1,10 @@
+Dun13Fr1000,Dune,2013,Frank Herbert,Library,null,0,
+Dun13Fr1001,Dune,2013,Frank Herbert,Hayward,STAFF001,1,STAFF001
+Dun13Fr1002,Dune,2013,Frank Herbert,Library,null,0,
+Wol14So1003,Wolf,2014,Someone,Library,null,0,
+Wol14So1004,Wolf,2014,Someone,Library,null,0,
+Wol14So1005,Wolf,2014,Someone,Library,null,0,
+Wol14So1006,Wolf,2014,Someone,Library,null,0,
+Wol14So1007,Wolf,2014,Someone,Library,null,0,
+Fre13Go1008,Fresh Book,2013,Good guy,Bishkek,null,0,
+Fre13Go1009,Fresh Book,2013,Good guy,Library,null,0,
